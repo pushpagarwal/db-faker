@@ -13,7 +13,7 @@ data class JsonValue(private val node: JsonNode) : DocumentValue {
 
     override val isPrimitive: Boolean get() = node.isValueNode
 
-    override fun <T> isCompatible(cls: Class<T>): Boolean {
+    override fun <T> isCompatiblePrimitive(cls: Class<T>): Boolean {
         TODO("Not yet implemented")
     }
 
