@@ -18,9 +18,9 @@ data class ResourceId(
     }
 
     private fun calcText(): String {
-        var len = 0;
+        var len = 0
         if (offer != 0)
-            len += 3;
+            len += 3
         else if (database != 0)
             len += Integer.BYTES
         if (documentCollection != 0)
@@ -32,7 +32,7 @@ data class ResourceId(
         if (offer != 0) {
             buffer.putShort(index, ((offer and 0x00FFFF00) shr 8).toShort())
             buffer.put(index, (offer and 0xff).toByte())
-            index += Integer.BYTES;
+            index += Integer.BYTES
         } else if (database != 0) {
             buffer.putInt(index, database)
             index += Integer.BYTES

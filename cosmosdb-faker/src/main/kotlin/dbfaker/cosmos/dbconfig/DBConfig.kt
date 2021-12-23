@@ -12,9 +12,9 @@ data class DBConfig(
     val name: String,
     val containers: List<ContainerConfig>
 ) {
-    fun initDB() : Database {
+    fun initDB(): Database {
         val ridCalc = ResourceId(database = rid)
-        val c = containers.stream().map{ c -> c.read(name, ridCalc)}
+        val c = containers.stream().map { c -> c.read(name, ridCalc) }
             .collect(Collectors.toList())
         return Database(ridCalc.text, name, c)
     }

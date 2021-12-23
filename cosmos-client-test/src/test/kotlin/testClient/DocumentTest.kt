@@ -27,11 +27,13 @@ class DocumentTest {
     }
 
     @Test
-    fun testGetDocument(){
+    fun testGetDocument() {
         val node = cosmosAsyncClient.getDatabase("test-cjm-cs").getContainer("contents")
-            .readItem("db993447-c9cd-48ff-a333-2e8f366dcfc8",
+            .readItem(
+                "db993447-c9cd-48ff-a333-2e8f366dcfc8",
                 PartitionKey("745F37C35E4B776E0A49421B@AdobeOrg_70f58060-5d47-11ea-bdff-a5384333ff34"),
-                JsonNode::class.java)
+                JsonNode::class.java
+            )
             .block()
         Assert.assertNotNull(node?.item)
     }

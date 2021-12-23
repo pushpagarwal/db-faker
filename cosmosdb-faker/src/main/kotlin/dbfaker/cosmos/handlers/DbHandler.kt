@@ -1,11 +1,9 @@
 package dbfaker.cosmos.handlers
 
-import dbfaker.cosmos.dto.DatabaseDto
 import dbfaker.cosmos.dto.DatabaseMapper
 import dbfaker.cosmos.dto.DatabasesDto
 import dbfaker.cosmos.dto.RootDto
 import dbfaker.cosmos.model.Database
-import exceptions.NotFound
 import org.mapstruct.factory.Mappers
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -23,7 +21,7 @@ class DbHandler(private val databases: List<Database>) {
 
     fun listDatabases(serverRequest: ServerRequest): Mono<ServerResponse> {
         val dto = databases.stream()
-            .map { d-> Mappers.getMapper(DatabaseMapper::class.java).toDto(d)!! }
+            .map { d -> Mappers.getMapper(DatabaseMapper::class.java).toDto(d)!! }
             .collect(Collectors.toList())
         return ServerResponse.ok().bodyValue(DatabasesDto(dto))
     }

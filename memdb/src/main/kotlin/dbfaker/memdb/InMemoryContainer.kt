@@ -7,7 +7,7 @@ import exceptions.PreConditionFailed
 import reactor.core.publisher.Mono
 
 
-class InMemoryContainer<K,V: Document>(private val cls: Class<K>) : Container<K,V> {
+class InMemoryContainer<K, V : Document<K>>(private val cls: Class<K>) : Container<K, V> {
     private val index = mutableMapOf<K, V>()
 
     override fun getById(id: K): Mono<V> {
@@ -15,32 +15,31 @@ class InMemoryContainer<K,V: Document>(private val cls: Class<K>) : Container<K,
     }
 
     override fun upsert(obj: V): Mono<V> {
-        val id = getId(obj)
+        val id = obj.id
         return Mono.just(update(id, obj))
     }
 
-    override fun updateOnlyIfExist(obj: V, ifMatch:String?): Mono<V> {
-        val id = getId(obj)
+    override fun updateOnlyIfExist(obj: V, ifMatch: String?): Mono<V> {
+        val id = obj.id
         if (index.contains(id)) {
-            if(ifMatch != null
-                && ifMatch != index[id]!!.etag)
-                throw PreConditionFailed("Etag doesn't match.")
+            if (ifMatch != null && ifMatch != index[id]!!.etag)
+                return Mono.error(PreConditionFailed("Etag doesn't match."))
             return Mono.just(update(id, obj))
         } else
             return Mono.error(NotFound())
     }
 
     override fun insertOnlyIfNotExist(obj: V): Mono<V> {
-        val id = getId(obj)
+        val id = obj.id
         return if (!index.contains(id)) {
             Mono.just(update(id, obj))
         } else
             Mono.error(PreConditionFailed("Object with id exists"))
     }
+
     private fun update(id: K, obj: V): V {
         index[id] = obj
         return index[id]!!
     }
 
-    private fun getId(obj: V): K = obj.getId(cls)
 }
