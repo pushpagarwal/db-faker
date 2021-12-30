@@ -26,3 +26,12 @@ tasks.withType<Test> {
         events("passed", "skipped", "failed")
     }
 }
+tasks.register<Copy>("copyTestResources") {
+    from("${projectDir}/src/test/resources")
+    into("${buildDir}/classes/test")
+}
+
+tasks.withType<ProcessResources>(){
+    dependsOn("copyTestResources")
+}
+

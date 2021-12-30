@@ -2,33 +2,92 @@ package dbfaker
 
 import com.fasterxml.jackson.core.JsonPointer
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.jsonMapper
-import com.fasterxml.jackson.module.kotlin.treeToValue
-import java.util.*
+import java.lang.IllegalArgumentException
 
+data class JsonValue(val node: JsonNode) : DocumentValue {
+    override val type: ValueType
+        get() {
+            return if (node.isValueNode) {
+                if (node.isNumber)
+                    ValueType.NUMBER
+                else if (node.isTextual)
+                    ValueType.TEXT
+                else if (node.isBoolean)
+                    ValueType.BOOLEAN
+                else
+                    ValueType.UNKNOWN
 
-data class JsonValue(private val node: JsonNode) : DocumentValue {
-    override val isObject: Boolean get() = node.isObject
+            } else if (node.isArray)
+                ValueType.ARRAY
+            else if (node.isObject)
+                ValueType.OBJECT
+            else
+                ValueType.UNKNOWN
+        }
+    override val value: Any
+        get() {
+            return if (node.isValueNode) {
+                if (node.isNumber)
+                    node.numberValue().toDouble()
+                else if (node.isTextual)
+                    node.textValue()
+                else if (node.isBoolean)
+                    node.booleanValue()
+                else
+                    Unit
+            } else if (node.isArray) {
+                listOf(node.elements())
+            } else if (node.isObject) {
+                val map = mutableMapOf<String, JsonNode>()
+                node.fields().forEach { (k, v) -> map[k] = v }
+                map
+            } else
+                Unit
+        }
 
-    override val isArray: Boolean get() = node.isArray
+    override fun at(path: String) = JsonValue(node.at(path))
 
-    override val isPrimitive: Boolean get() = node.isValueNode
+    override fun get(propertyName: String) = JsonValue(node.get(propertyName))
 
-    override fun <T> isCompatible(cls: Class<T>): Boolean {
-        TODO("Not yet implemented")
+    override fun compareTo(other: DocumentValue): Int {
+        val selfType = type
+        val otherType = other.type
+        if (selfType != otherType)
+            throw IllegalArgumentException("Comparison on different type of object.")
+
+        return if (!selfType.isPrimitive || !otherType.isPrimitive) {
+            if (value == other.value)
+                0
+            else throw IllegalArgumentException("Comparison on Non value type.")
+        } else {
+            when (val v = value) {
+                is String -> v.compareTo(other.value as String)
+                is Double -> v.compareTo(other.value as Double)
+                is Boolean ->
+                    if (v == other.value)
+                        0
+                    else
+                        throw IllegalArgumentException("Comparison on Boolean type.")
+                else -> throw IllegalArgumentException("Comparison on unknown type of object.")
+            }
+        }
+
     }
-
-    override fun <T> getAs(cls: Class<T>): T = jacksonObjectMapper().treeToValue(node, cls)
 }
 
-abstract class JsonDocument(protected val node: ObjectNode) : Document {
+abstract class JsonDocument<T>(protected val node: ObjectNode) : Document<T> {
     override val etag: String? get() = node.get("_etag").asText()
-    override fun <T> getId(cls: Class<T>): T =
-        jacksonObjectMapper().treeToValue(node.get("id"),cls)
+    override val id: T
+        get() =
+            jacksonObjectMapper().treeToValue(node.get("id"), keyClass)
 
-    override fun get(path: String): DocumentValue =
+    override fun get(propertyName: String): DocumentValue =
+        JsonValue(node.get(propertyName))
+
+    override fun at(path: String): DocumentValue =
         JsonValue(node.at(JsonPointer.valueOf(path)))
+
+    abstract val keyClass: Class<T>
 }

@@ -1,7 +1,9 @@
 package dbfaker
 
-interface Document {
+interface Document<T> {
     val etag: String?
-    fun <T> getId(cls:Class<T>): T
-    fun get(path:String) : DocumentValue
+    val id: T
+    fun at(path: String): DocumentValue
+    fun get(propertyName: String): DocumentValue
 }
+

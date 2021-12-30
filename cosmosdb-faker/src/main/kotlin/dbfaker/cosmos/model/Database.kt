@@ -1,6 +1,5 @@
 package dbfaker.cosmos.model
 
-import dbfaker.Container
 import java.time.Instant
 import java.util.UUID
 
@@ -19,7 +18,7 @@ class Database(
             .orElse(null)
 
     companion object {
-       private fun compareById(id: String): (Database) -> Boolean =
+        private fun compareById(id: String): (Database) -> Boolean =
             { d -> d.name == id || d.rid == id }
 
         fun databaseQueryById(list: List<Database>): (String) -> Database? =

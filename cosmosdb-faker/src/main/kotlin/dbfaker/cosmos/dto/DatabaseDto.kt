@@ -4,8 +4,6 @@ import dbfaker.cosmos.model.Database
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
 import org.mapstruct.Mappings
-import java.nio.ByteBuffer
-import java.util.*
 
 data class DatabaseDto(
     val id: String,
@@ -19,7 +17,7 @@ data class DatabaseDto(
 
 }
 
-data class DatabasesDto(val databases:List<DatabaseDto>) {
+data class DatabasesDto(val databases: List<DatabaseDto>) {
     val _rid = ""
 }
 
@@ -27,7 +25,7 @@ data class DatabasesDto(val databases:List<DatabaseDto>) {
 abstract class DatabaseMapper {
     @Mappings(
         Mapping(target = "id", source = "name"),
-        Mapping(target = "_rid", source ="rid")
+        Mapping(target = "_rid", source = "rid")
     )
     abstract fun toDto(d: Database?): DatabaseDto?
 }

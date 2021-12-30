@@ -32,7 +32,10 @@ class Router {
     @Bean
     fun routeDocs(handler: DbDocumentHandler) = router {
         accept(MediaType.APPLICATION_JSON).nest {
+            POST("/dbs/{dbId}/colls/{colId}/docs").invoke(handler::create)
+            GET("/dbs/{dbId}/colls/{colId}/docs/").invoke(handler::create)
             GET("/dbs/{dbId}/colls/{colId}/docs/{docId}").invoke(handler::getById)
+            PUT("/dbs/{dbId}/colls/{colId}/docs/{docId}").invoke(handler::updateById)
         }
     }
 }

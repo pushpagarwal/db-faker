@@ -1,6 +1,5 @@
 package dbfaker.cosmos.config
 
-import dbfaker.Document
 import dbfaker.cosmos.dbconfig.DBConfig
 import dbfaker.cosmos.model.Database
 import org.springframework.beans.factory.annotation.Value
