@@ -2,8 +2,10 @@ package dbfaker.memdb
 
 import dbfaker.Container
 import dbfaker.Document
+import dbfaker.ScanQuery
 import exceptions.NotFound
 import exceptions.PreConditionFailed
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 
@@ -36,6 +38,11 @@ class InMemoryContainer<K, V : Document<K>>(private val cls: Class<K>) : Contain
         } else
             Mono.error(PreConditionFailed("Object with id exists"))
     }
+
+    override fun scanQuery(query: ScanQuery<K>, startCursor: String, limit: Int): Flux<V> {
+        return Flux.empty()
+    }
+
 
     private fun update(id: K, obj: V): V {
         index[id] = obj

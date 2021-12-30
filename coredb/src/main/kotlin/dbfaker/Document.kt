@@ -3,6 +3,7 @@ package dbfaker
 interface Document<T> {
     val etag: String?
     val id: T
-    fun get(path: String): DocumentValue
+    fun at(path: String): DocumentValue
+    fun get(propertyName: String): DocumentValue
 }
 

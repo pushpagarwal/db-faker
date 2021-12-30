@@ -1,0 +1,46 @@
+{
+  "id": "db993447-c9cd-48ff-a333-2e8f366dcfc8",
+  "partitionKey": "p1",
+  "createdAt": 1613027245364,
+  "modifiedAt": 1613027245364,
+  "name": "test307",
+  "mimeType": "application/json",
+  "createdBy": "joe",
+  "modifiedBy": "jack",
+  "_etag": "\"03000731-0000-0200-0000-6024d7ad0000\"",
+  "description": null,
+  "state": "ACTIVE",
+  "data": {
+    "schemaVersion": "0.1",
+    "channels": {
+      "email": {
+        "variants": [
+          {
+            "name": "default",
+            "language": "en-us",
+            "componentId": "b99d89e9-e5ed-4265-84ca-242d94a16986",
+            "storageId": "a41c5370-0afa-44de-8c44-ede74a59b0b6"
+          }
+        ]
+      },
+      "push": {
+        "variants": [
+          {
+            "name": "default",
+            "language": "en-us",
+            "componentId": "19240608-cef3-441e-86ea-7759e62ea7ec",
+            "storageId": "fed92aa6-5ead-4609-9474-65b916de1c3b"
+          }
+        ]
+      }
+    },
+    "brandingPresetId": "fa2e06b3-34a0-4029-806f-36f8fbaf2b7a",
+    "status": "DRAFT",
+    "trackingOptions": {
+      "openTrackingEnabled": true,
+      "clickTrackingEnabled": false
+    },
+    "lastPublication": null
+  },
+  "_ts": 1613027245
+}
