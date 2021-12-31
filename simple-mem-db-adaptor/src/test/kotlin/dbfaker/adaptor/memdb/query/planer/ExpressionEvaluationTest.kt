@@ -1,21 +1,18 @@
-package dbfaker.parser
+package dbfaker.adaptor.memdb.query.planer
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.databind.node.TextNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.h0tk3y.betterParse.parser.parseToEnd
-import dbfaker.JsonDocument
-import dbfaker.JsonValue
-import dbfaker.planer.ExpressionBuilder
+import dbfaker.ResourceId
+import dbfaker.adaptor.memdb.DbObject
+import dbfaker.parser.SqlGrammar
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.io.FileInputStream
-import java.io.IOException
 import java.io.InputStream
 import java.lang.invoke.MethodHandles
-import java.net.URISyntaxException
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -26,14 +23,13 @@ class ExpressionEvaluationTest {
     @Before
     fun setup() {
         val node = jacksonObjectMapper().readTree(readFile("object1.json"))
-        val doc = object : JsonDocument<String>(node as ObjectNode) {
-            override val keyClass = String::class.java
-        }
+        val doc = DbObject.fromJson(node as ObjectNode, ResourceId(123, 234 shl 8))
         evaluator = ExpressionBuilder("c", doc)
     }
 
     @Test
     fun testSomeSimpleExpr() {
+        Assert.assertEquals(true.compareTo(true), 0)
         testSimple("true", true)
         testSimple("4", 4.0)
         testSimple("4!=5", true)
@@ -42,7 +38,7 @@ class ExpressionEvaluationTest {
         testSimple("4<=4", true)
         testSimple("4<=3", false)
         testSimple("5>=3", true)
-        testSimple("c.id", JsonValue(TextNode("db993447-c9cd-48ff-a333-2e8f366dcfc8")))
+        testSimple("c.id", "db993447-c9cd-48ff-a333-2e8f366dcfc8")
         testSimple("c.id=\"db993447-c9cd-48ff-a333-2e8f366dcfc8\"", true)
         testSimple("c.data.trackingOptions.openTrackingEnabled=true", true)
         testSimple("(c.data.trackingOptions).openTrackingEnabled=true", true)
@@ -50,7 +46,7 @@ class ExpressionEvaluationTest {
 
     private fun testSimple(exprStr: String, expectedValue: Any) {
         val expr = SqlGrammar.condition.parseToEnd(SqlGrammar.tokenizer.tokenize(exprStr))
-        Assert.assertEquals(expectedValue, evaluator.evaluate(expr))
+        Assert.assertEquals(expectedValue, evaluator.evaluate(expr).value)
     }
 
     private fun readFile(vararg path: String?): InputStream {

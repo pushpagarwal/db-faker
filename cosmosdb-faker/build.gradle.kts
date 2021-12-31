@@ -15,7 +15,8 @@ repositories {
 
 dependencies {
     api(project(":coredb"))
-    api(project(":memdb"))
+    api(project(":db-interface"))
+    api(project(":simple-mem-db-adaptor"))
     implementation(kotlin("stdlib"))
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")

@@ -1,4 +1,4 @@
-package dbfaker.cosmos.model
+package dbfaker
 
 import java.nio.ByteBuffer
 import java.util.*

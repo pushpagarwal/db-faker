@@ -1,11 +1,9 @@
-package dbfaker.cosmos.dbconfig
+package dbfaker.adaptor.memdb.dbconfig
 
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jsonMapper
-import dbfaker.cosmos.model.DBCollection
-import dbfaker.cosmos.model.DbObject
-import dbfaker.cosmos.model.PartitionKey
-import dbfaker.cosmos.model.ResourceId
+import dbfaker.PartitionKey
+import dbfaker.ResourceId
+import dbfaker.adaptor.memdb.DBCollection
 import dbfaker.memdb.InMemoryContainer
 import java.io.File
 import java.lang.IllegalArgumentException
@@ -29,7 +27,7 @@ data class ContainerConfig(
                     val text = it.toString()
                     throw IllegalArgumentException("Object expected but found:$text")
                 }
-                container.upsert(DbObject(it as ObjectNode, ridCalc)).block()
+                container.upsert(it).block()
             }
         }
         return container

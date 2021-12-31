@@ -1,8 +1,8 @@
 package dbfaker.cosmos.dto
 
-import dbfaker.cosmos.model.DBCollection
-import dbfaker.cosmos.model.PartitionKey
-import dbfaker.cosmos.model.ResourceId
+import dbfaker.CosmosCollection
+import dbfaker.PartitionKey
+import dbfaker.ResourceId
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
 import org.mapstruct.Mappings
@@ -27,9 +27,11 @@ data class CollectionDto(
 abstract class CollectionMapper {
     @Mappings(
         Mapping(target = "id", source = "name"),
-        Mapping(target = "_rid", source = "rid")
+        Mapping(target = "_rid", source = "rid"),
+        Mapping(target = "_etag", source = "etag"),
+        Mapping(target = "_ts", source = "ts")
     )
-    abstract fun toDto(d: DBCollection): CollectionDto
+    abstract fun toDto(d: CosmosCollection): CollectionDto
     fun text(r: ResourceId): String = r.text
 
 }

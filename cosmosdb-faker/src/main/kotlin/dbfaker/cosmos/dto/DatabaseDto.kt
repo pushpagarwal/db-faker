@@ -1,6 +1,7 @@
 package dbfaker.cosmos.dto
 
-import dbfaker.cosmos.model.Database
+import dbfaker.CosmosDataBase
+import dbfaker.ResourceId
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
 import org.mapstruct.Mappings
@@ -25,7 +26,10 @@ data class DatabasesDto(val databases: List<DatabaseDto>) {
 abstract class DatabaseMapper {
     @Mappings(
         Mapping(target = "id", source = "name"),
-        Mapping(target = "_rid", source = "rid")
+        Mapping(target = "_rid", source = "rid"),
+        Mapping(target = "_etag", source = "etag"),
+        Mapping(target = "_ts", source = "ts")
     )
-    abstract fun toDto(d: Database?): DatabaseDto?
+    abstract fun toDto(d: CosmosDataBase?): DatabaseDto
+    fun text(r: ResourceId): String = r.text
 }
