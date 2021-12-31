@@ -32,10 +32,20 @@ class Router {
     @Bean
     fun routeDocs(handler: DbDocumentHandler) = router {
         accept(MediaType.APPLICATION_JSON).nest {
-            POST("/dbs/{dbId}/colls/{colId}/docs").invoke(handler::create)
-            GET("/dbs/{dbId}/colls/{colId}/docs/").invoke(handler::create)
+            contentType(MediaType.parseMediaType("application/query+json")).not().nest {
+                POST("/dbs/{dbId}/colls/{colId}/docs").invoke(handler::create)
+                GET("/dbs/{dbId}/colls/{colId}/docs/").invoke(handler::create)
+            }
             GET("/dbs/{dbId}/colls/{colId}/docs/{docId}").invoke(handler::getById)
             PUT("/dbs/{dbId}/colls/{colId}/docs/{docId}").invoke(handler::updateById)
         }
     }
+
+    @Bean
+    fun queryDocs(handler: DbDocumentHandler) = router {
+        contentType(MediaType.parseMediaType("application/query+json")).nest {
+            POST("/dbs/{dbId}/colls/{colId}/docs").invoke(handler::query)
+        }
+    }
+
 }

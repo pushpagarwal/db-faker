@@ -2,7 +2,7 @@ package dbfaker.memdb
 
 import dbfaker.memdb.exceptions.NotFound
 import dbfaker.memdb.exceptions.PreConditionFailed
-
+import java.util.stream.Stream
 
 
 class InMemoryContainer<K, V : JsonDocument<K>>(private val cls: Class<K>) {
@@ -35,10 +35,13 @@ class InMemoryContainer<K, V : JsonDocument<K>>(private val cls: Class<K>) {
             throw PreConditionFailed("Object with id exists")
     }
 
+    fun stream(): Stream<V> = index.values.stream()
+
 
     private fun update(id: K, obj: V): V {
         index[id] = obj
         return index[id]!!
     }
+
 
 }

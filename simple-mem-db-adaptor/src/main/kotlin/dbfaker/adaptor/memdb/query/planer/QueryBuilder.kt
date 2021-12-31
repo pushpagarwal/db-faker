@@ -4,7 +4,7 @@ import dbfaker.parser.QueryExpression
 
 
 
-object Builder {
+object QueryBuilder {
     fun buildQuery(query: QueryExpression): Query {
         return Query(ExpressionBuilder.build(query.alias, query.condition))
     }

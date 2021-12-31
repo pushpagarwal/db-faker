@@ -25,5 +25,5 @@ interface CosmosCollection {
     fun getById(id: String): Mono<JsonNode>
     fun upsert(obj: JsonNode): Mono<JsonNode>
     fun updateOnlyIfExist(obj: JsonNode, ifMatch: String? = null): Mono<JsonNode>
-    fun query(query: String, startCursor: String?): Flux<QueryResponseItem>
+    fun query(query: String, startCursor: String? = null): Flux<QueryResponseItem>
 }
