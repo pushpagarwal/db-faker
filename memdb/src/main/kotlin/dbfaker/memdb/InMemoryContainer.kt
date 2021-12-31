@@ -1,46 +1,38 @@
 package dbfaker.memdb
 
-import dbfaker.Container
-import dbfaker.Document
-import dbfaker.ScanQuery
-import exceptions.NotFound
-import exceptions.PreConditionFailed
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
+import dbfaker.memdb.exceptions.NotFound
+import dbfaker.memdb.exceptions.PreConditionFailed
 
 
-class InMemoryContainer<K, V : Document<K>>(private val cls: Class<K>) : Container<K, V> {
+
+class InMemoryContainer<K, V : JsonDocument<K>>(private val cls: Class<K>) {
     private val index = mutableMapOf<K, V>()
 
-    override fun getById(id: K): Mono<V> {
-        return Mono.justOrEmpty(index[id])
+    fun getById(id: K): V? {
+        return index[id]
     }
 
-    override fun upsert(obj: V): Mono<V> {
+    fun upsert(obj: V): V {
         val id = obj.id
-        return Mono.just(update(id, obj))
+        return update(id, obj)
     }
 
-    override fun updateOnlyIfExist(obj: V, ifMatch: String?): Mono<V> {
+    fun updateOnlyIfExist(obj: V, ifMatch: String?): V {
         val id = obj.id
         if (index.contains(id)) {
             if (ifMatch != null && ifMatch != index[id]!!.etag)
-                return Mono.error(PreConditionFailed("Etag doesn't match."))
-            return Mono.just(update(id, obj))
+                throw PreConditionFailed("Etag doesn't match.")
+            return update(id, obj)
         } else
-            return Mono.error(NotFound())
+            throw NotFound()
     }
 
-    override fun insertOnlyIfNotExist(obj: V): Mono<V> {
+    fun insertOnlyIfNotExist(obj: V): V {
         val id = obj.id
         return if (!index.contains(id)) {
-            Mono.just(update(id, obj))
+            update(id, obj)
         } else
-            Mono.error(PreConditionFailed("Object with id exists"))
-    }
-
-    override fun scanQuery(query: ScanQuery<K>, startCursor: String, limit: Int): Flux<V> {
-        return Flux.empty()
+            throw PreConditionFailed("Object with id exists")
     }
 
 

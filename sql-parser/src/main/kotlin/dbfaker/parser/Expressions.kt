@@ -4,7 +4,7 @@ sealed interface ScalarExpression
 
 data class QueryExpression(val alias: String, val condition: ScalarExpression)
 
-interface PropertyExpression : ScalarExpression {
+sealed interface PropertyExpression : ScalarExpression {
     val path: String
 }
 
@@ -25,7 +25,7 @@ data class BooleanConst(val value: Boolean) : ScalarExpression
 
 data class TextConst(val value: String) : ScalarExpression
 
-interface BinaryExpression : ScalarExpression {
+sealed interface BinaryExpression : ScalarExpression {
     val left: ScalarExpression
     val right: ScalarExpression
 }
