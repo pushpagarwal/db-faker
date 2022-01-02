@@ -1,3 +1,4 @@
+
 plugins {
     kotlin("jvm")
     id("org.springframework.boot") version "2.5.7"
@@ -8,18 +9,17 @@ plugins {
 group = "io.github.pushpagarwal"
 version = "1.0-SNAPSHOT"
 
-repositories {
-    mavenCentral()
-}
+val antlrKotlinVersion = "0fad6c228a"
 
 dependencies {
     api(project(":db-interface"))
     api(project(":memdb"))
-    api(project(":sql-parser"))
+    api(project(":sql-parser-antlr"))
     implementation(kotlin("stdlib"))
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
     implementation("com.github.h0tk3y.betterParse:better-parse:0.4.3")
+    implementation("com.strumenta.antlr-kotlin:antlr-kotlin-runtime-jvm:$antlrKotlinVersion")
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("junit:junit:4.13.2")
 

@@ -2,10 +2,9 @@ package dbfaker.adaptor.memdb.query.planer
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.github.h0tk3y.betterParse.parser.parseToEnd
 import dbfaker.ResourceId
 import dbfaker.adaptor.memdb.DbObject
-import dbfaker.parser.SqlGrammar
+import dbfaker.parser.SqlParser
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
@@ -45,8 +44,8 @@ class ExpressionEvaluationTest {
     }
 
     private fun testSimple(exprStr: String, expectedValue: Any) {
-        val expr = SqlGrammar.condition.parseToEnd(SqlGrammar.tokenizer.tokenize(exprStr))
-        Assert.assertEquals(expectedValue, evaluator.evaluate(expr).value)
+        val expr = SqlParser.parse("select * from c where $exprStr")
+        Assert.assertEquals(expectedValue, evaluator.evaluate(expr.condition).value)
     }
 
     private fun readFile(vararg path: String?): InputStream {

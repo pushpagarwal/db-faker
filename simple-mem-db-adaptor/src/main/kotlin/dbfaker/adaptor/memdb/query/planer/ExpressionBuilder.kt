@@ -2,6 +2,7 @@ package dbfaker.adaptor.memdb.query.planer
 
 import dbfaker.memdb.*
 import dbfaker.parser.*
+import dbfaker.parser.model.*
 
 typealias QueryPredicate = (JsonDocument<String>) -> Boolean
 
@@ -21,6 +22,8 @@ class ExpressionBuilder(private val alias: String, private val doc: JsonDocument
             is LessEqual -> compare(expression) { it <= 0 }
             is GreaterEqual -> compare(expression) { it >= 0 }
             is Id -> doc.get(expression.name)
+            NullConst -> NullValue
+            UndefinedConst -> UndefinedValue
         }
     }
 

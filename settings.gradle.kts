@@ -6,5 +6,4 @@ include("db-interface")
 include("simple-mem-db-adaptor")
 include("cosmosdb-faker")
 include("cosmos-client-test")
-
-
+include("sql-parser-antlr")

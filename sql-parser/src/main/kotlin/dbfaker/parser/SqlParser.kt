@@ -2,12 +2,14 @@ package dbfaker.parser
 
 import com.github.h0tk3y.betterParse.combinators.*
 import com.github.h0tk3y.betterParse.grammar.Grammar
+import com.github.h0tk3y.betterParse.grammar.parseToEnd
 import com.github.h0tk3y.betterParse.grammar.parser
 import com.github.h0tk3y.betterParse.lexer.*
 import com.github.h0tk3y.betterParse.parser.Parser
+import dbfaker.parser.model.*
 
 
-object SqlGrammar : Grammar<QueryExpression>() {
+object SqlParser : Grammar<QueryExpression>() {
     private val st = SqlTokens()
 
     override val tokens: List<Token> get(): List<Token> = st.tokens.distinctBy { it.name ?: it }
@@ -51,4 +53,5 @@ object SqlGrammar : Grammar<QueryExpression>() {
     override
     val rootParser by query
 
+    fun parse(queryStr: String): QueryExpression = parseToEnd(queryStr)
 }

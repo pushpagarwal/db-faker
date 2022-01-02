@@ -6,7 +6,7 @@ import com.github.h0tk3y.betterParse.grammar.parseToEnd
 import dbfaker.*
 import dbfaker.adaptor.memdb.query.planer.QueryBuilder
 import dbfaker.memdb.InMemoryContainer
-import dbfaker.parser.SqlGrammar
+import dbfaker.parser.SqlParser
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
@@ -35,7 +35,7 @@ class DBCollection(
         )
 
     override fun query(query: String, startCursor: String?): Flux<QueryResponseItem> {
-        val queryExpression = SqlGrammar.parseToEnd(query)
+        val queryExpression = SqlParser.parse(query)
         val q = QueryBuilder.buildQuery(queryExpression)
         return Flux.fromStream(
             c.stream()

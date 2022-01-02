@@ -1,4 +1,4 @@
-package dbfaker.parser
+package dbfaker.parser.model
 
 interface Operator {
     fun compose(left: ScalarExpression, right: ScalarExpression): ScalarExpression

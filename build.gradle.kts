@@ -2,11 +2,18 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "1.5.10"
 }
 
-group = "io.github.pushpagarwal"
-version =  "1.0-SNAPSHOT"
+allprojects {
+    group = "io.github.pushpagarwal"
+    version = "1.0-SNAPSHOT"
 
-repositories {
-    mavenCentral()
+    repositories {
+
+        mavenLocal()
+        mavenCentral()
+        maven("https://jitpack.io")
+
+    }
+
 }
 
 dependencies {

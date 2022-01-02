@@ -5,9 +5,6 @@ plugins {
 group= "io.github.pushpagarwal"
 version= "1.0-SNAPSHOT"
 
-repositories {
-    mavenCentral()
-}
 
 dependencies {
     api(project(":coredb"))

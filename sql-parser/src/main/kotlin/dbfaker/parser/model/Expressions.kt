@@ -1,4 +1,4 @@
-package dbfaker.parser
+package dbfaker.parser.model
 
 sealed interface ScalarExpression
 

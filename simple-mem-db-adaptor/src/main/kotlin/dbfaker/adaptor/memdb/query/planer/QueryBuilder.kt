@@ -1,6 +1,6 @@
 package dbfaker.adaptor.memdb.query.planer
 
-import dbfaker.parser.QueryExpression
+import dbfaker.parser.model.QueryExpression
 
 
 
