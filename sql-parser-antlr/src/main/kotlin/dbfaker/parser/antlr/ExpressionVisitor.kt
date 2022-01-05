@@ -3,6 +3,7 @@ package dbfaker.parser.antlr
 import dbfaker.parser.model.*
 import org.antlr.v4.kotlinruntime.ParserRuleContext
 import org.antlr.v4.kotlinruntime.tree.TerminalNode
+import java.util.stream.Collectors
 
 class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
     private lateinit var aliasList: List<String>
@@ -38,6 +39,18 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
         return Id(alias)
     }
 
+    override fun visitBetween_scalar_expression(ctx: CosmosDBSqlParser.Between_scalar_expressionContext)
+            : BaseQueryExpression {
+        val expressions = ctx.findBinary_expression()
+        val first = expressions[0].accept(this) as ScalarExpression
+        val second = expressions[1].accept(this) as ScalarExpression
+        val third = expressions[2].accept(this) as ScalarExpression
+        val ge = GreaterEqual(first, second)
+        val le = LessEqual(first, third)
+        val expr = And(ge, le)
+        return if (ctx.NOT() != null) Not(expr) else expr
+    }
+
     override fun visitComparison(ctx: CosmosDBSqlParser.ComparisonContext): BaseQueryExpression {
         val expressions = ctx.findBinary_expression()
         val left = expressions[0].accept(this) as ScalarExpression
@@ -53,9 +66,62 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
         }
     }
 
-    override fun visitParenthesisScalarExpression(ctx: CosmosDBSqlParser.ParenthesisScalarExpressionContext): BaseQueryExpression {
+    override fun visitLogicalANDExpression(ctx: CosmosDBSqlParser.LogicalANDExpressionContext): BaseQueryExpression {
+        val expressions = ctx.findLogical_scalar_expression()
+        val left = expressions[0].accept(this) as ScalarExpression
+        val right = expressions[1].accept(this) as ScalarExpression
+        return And(left, right)
+    }
+
+    override fun visitLogicalOrExpression(ctx: CosmosDBSqlParser.LogicalOrExpressionContext): BaseQueryExpression {
+        val expressions = ctx.findLogical_scalar_expression()
+        val left = expressions[0].accept(this) as ScalarExpression
+        val right = expressions[1].accept(this) as ScalarExpression
+        return Or(left, right)
+    }
+
+    override fun visitMultiplication(ctx: CosmosDBSqlParser.MultiplicationContext): BaseQueryExpression {
+        val expressions = ctx.findBinary_expression()
+        val left = expressions[0].accept(this) as ScalarExpression
+        val right = expressions[1].accept(this) as ScalarExpression
+        return when (getToken(ctx, multiplicationTypeSet)?.symbol?.type) {
+            CosmosDBSqlParser.Tokens.MUL.id -> Multiplication(left, right)
+            CosmosDBSqlParser.Tokens.DIV.id -> Divide(left, right)
+            CosmosDBSqlParser.Tokens.MOD.id -> ModExpression(left, right)
+            else -> throw IllegalStateException()
+        }
+    }
+
+    override fun visitAddition(ctx: CosmosDBSqlParser.AdditionContext): BaseQueryExpression {
+        val expressions = ctx.findBinary_expression()
+        val left = expressions[0].accept(this) as ScalarExpression
+        val right = expressions[1].accept(this) as ScalarExpression
+        return when (getToken(ctx, additionTypeSet)?.symbol?.type) {
+            CosmosDBSqlParser.Tokens.ADD.id -> Addition(left, right)
+            CosmosDBSqlParser.Tokens.SUB.id -> Subtraction(left, right)
+            CosmosDBSqlParser.Tokens.BIT_OR_OP.id -> BitOr(left, right)
+            CosmosDBSqlParser.Tokens.BIT_AND_OP.id -> BitAnd(left, right)
+            CosmosDBSqlParser.Tokens.BIT_XOR_OP.id -> BitXor(left, right)
+            else -> throw IllegalStateException()
+        }
+    }
+
+    override fun visitUnary_expression(ctx: CosmosDBSqlParser.Unary_expressionContext): BaseQueryExpression {
+        val pe = ctx.findPrimary_expression()?.accept(this)!! as ScalarExpression
+        return when (ctx.findUnary_operator()?.text) {
+            "~" -> BitComplement(pe)
+            "NOT" -> Not(pe)
+            "-" -> Negate(pe)
+            else -> pe
+        }
+
+    }
+
+    override fun visitParenthesisScalarExpression(ctx: CosmosDBSqlParser.ParenthesisScalarExpressionContext)
+            : BaseQueryExpression {
         return ctx.findScalar_expression()?.accept(this)!!
     }
+
     override fun visitPropertyPath(ctx: CosmosDBSqlParser.PropertyPathContext): BaseQueryExpression {
         val left = ctx.findPrimary_expression()?.accept(this) as ScalarExpression
         val right = ctx.findProperty_name()?.accept(this) as PropertyExpression
@@ -64,6 +130,16 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
             else -> Property(left, right)
         }
     }
+
+    override fun visitArrayIndexed(ctx: CosmosDBSqlParser.ArrayIndexedContext): BaseQueryExpression {
+        val left = ctx.findPrimary_expression()!!.accept(this) as ScalarExpression
+        val right = ctx.findScalar_expression()!!.accept(this) as ScalarExpression
+        return if (left is PropertyExpression && right is LongConst)
+            IdPropertyPath(left, Id(right.value.toString()))
+        else
+            IndexExpression(left, right)
+    }
+
 
     override fun visitProperty_name(ctx: CosmosDBSqlParser.Property_nameContext): BaseQueryExpression {
         return Id(ctx.text)
@@ -89,11 +165,124 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
         return NumberConst(ctx.NUMBER()!!.text.toDouble())
     }
 
+    override fun visitConstInteger(ctx: CosmosDBSqlParser.ConstIntegerContext): BaseQueryExpression {
+        return LongConst(ctx.INTEGER()!!.text.toLong())
+    }
+
     override fun visitConstText(ctx: CosmosDBSqlParser.ConstTextContext): BaseQueryExpression {
         val text = ctx.text
         return TextConst(text.substring(1, text.length - 1))
     }
 
+    override fun visitArray_constant(ctx: CosmosDBSqlParser.Array_constantContext): BaseQueryExpression {
+        val list = ctx.findArray_constant_list()!!.accept(this) as TemporaryConstExpressionList
+        return ArrayConst(list.list)
+    }
+
+    override fun visitArray_constant_list(ctx: CosmosDBSqlParser.Array_constant_listContext): BaseQueryExpression {
+        val list: TemporaryConstExpressionList = (ctx.findArray_constant_list()?.accept(this)
+            ?: TemporaryConstExpressionList()) as TemporaryConstExpressionList
+        val constExpr = ctx.findConstant()?.accept(this) as ConstExpression?
+        if (constExpr != null)
+            list.list.add(constExpr)
+        return list
+    }
+
+    override fun visitObject_constant(ctx: CosmosDBSqlParser.Object_constantContext): BaseQueryExpression {
+        val list = ctx.findObject_constant_items()!!.accept(this) as TemporaryConstPropertyList
+        val map = list.list.stream()
+            .collect(Collectors.toUnmodifiableMap({ it.key }, { it.value }))
+        return ObjectConst(map)
+    }
+
+    override fun visitObject_constant_items(ctx: CosmosDBSqlParser.Object_constant_itemsContext): BaseQueryExpression {
+        val list: TemporaryConstPropertyList = (ctx.findObject_constant_items()?.accept(this)
+            ?: TemporaryConstPropertyList()) as TemporaryConstPropertyList
+        val constProperty = ctx.findObject_constant_item()?.accept(this) as TemporaryConstProperty?
+        if (constProperty != null)
+            list.list.add(constProperty)
+        return list
+    }
+
+    override fun visitObject_constant_item(ctx: CosmosDBSqlParser.Object_constant_itemContext): BaseQueryExpression {
+        val left = ctx.findProperty_name()!!.accept(this) as Id
+        val right = ctx.findConstant()!!.accept(this) as ConstExpression
+        return TemporaryConstProperty(left, right)
+    }
+
+    override fun visitIn_scalar_expression(ctx: CosmosDBSqlParser.In_scalar_expressionContext): BaseQueryExpression {
+        val left = ctx.findBinary_expression()!!.accept(this) as ScalarExpression
+        val right = ctx.findIn_scalar_expression_item_list()!!.accept(this) as TemporaryScalarExpressionList
+        val expr = InExpression(left, right.list)
+        return if (ctx.NOT() != null) Not(expr) else expr
+    }
+
+    override fun visitIn_scalar_expression_item_list(ctx: CosmosDBSqlParser.In_scalar_expression_item_listContext)
+            : BaseQueryExpression {
+        val left: TemporaryScalarExpressionList = (ctx.findIn_scalar_expression_item_list()?.accept(this)
+            ?: TemporaryScalarExpressionList()) as TemporaryScalarExpressionList
+        val right = ctx.findScalar_expression()?.accept(this) as ScalarExpression?
+        if (right != null)
+            left.list.add(right)
+        return left
+    }
+
+    override fun visitArray_create_expression(ctx: CosmosDBSqlParser.Array_create_expressionContext): BaseQueryExpression {
+        val expressionList = ctx.findArray_item_list()!!.accept(this) as TemporaryScalarExpressionList
+        return ArrayCreation(expressionList.list)
+    }
+
+    override fun visitArray_item_list(ctx: CosmosDBSqlParser.Array_item_listContext): BaseQueryExpression {
+        val left: TemporaryScalarExpressionList = (ctx.findArray_item_list()?.accept(this)
+            ?: TemporaryScalarExpressionList()) as TemporaryScalarExpressionList
+        val right = ctx.findScalar_expression()?.accept(this) as ScalarExpression?
+        if (right != null)
+            left.list.add(right)
+        return left
+    }
+
+    override fun visitObject_create_expression(ctx: CosmosDBSqlParser.Object_create_expressionContext): BaseQueryExpression {
+        val list = ctx.findObject_property_list()!!.accept(this) as TemporaryScalarPropertyList
+        val map = list.list.stream()
+            .collect(Collectors.toUnmodifiableMap({ it.key }, { it.value }))
+        return ObjectCreation(map)
+    }
+
+    override fun visitObject_property_list(ctx: CosmosDBSqlParser.Object_property_listContext): BaseQueryExpression {
+        val list: TemporaryScalarPropertyList = (ctx.findObject_property_list()?.accept(this)
+            ?: TemporaryConstPropertyList()) as TemporaryScalarPropertyList
+        val property = ctx.findObject_property()?.accept(this) as TemporaryScalarProperty?
+        if (property != null)
+            list.list.add(property)
+        return list
+    }
+
+    override fun visitObject_property(ctx: CosmosDBSqlParser.Object_propertyContext): BaseQueryExpression {
+        val left = ctx.findProperty_name()!!.accept(this) as Id
+        val right = ctx.findScalar_expression()!!.accept(this) as ScalarExpression
+        return TemporaryScalarProperty(left, right)
+    }
+
+    override fun visitFunction_call_expression(ctx: CosmosDBSqlParser.Function_call_expressionContext): BaseQueryExpression {
+        if (ctx.K_udf() != null)
+            TODO("UDF functions are not supported yet.")
+        val name = ctx.findSys_function_name()?.accept(this) as Id
+        val arguments = ctx.findFunction_arg_list()?.accept(this) as TemporaryScalarExpressionList?
+        return FunctionCall(name, arguments?.list ?: listOf())
+    }
+
+    override fun visitFunction_arg_list(ctx: CosmosDBSqlParser.Function_arg_listContext): BaseQueryExpression {
+        val left: TemporaryScalarExpressionList = (ctx.findFunction_arg_list()?.accept(this)
+            ?: TemporaryScalarExpressionList()) as TemporaryScalarExpressionList
+        val right = ctx.findScalar_expression()?.accept(this) as ScalarExpression?
+        if (right != null)
+            left.list.add(right)
+        return left
+    }
+
+    override fun visitSys_function_name(ctx: CosmosDBSqlParser.Sys_function_nameContext): BaseQueryExpression {
+        return Id(ctx.text)
+    }
 
     private fun getToken(ctx: ParserRuleContext, types: Set<Int>): TerminalNode? {
         val children = ctx.children
@@ -113,6 +302,15 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
         return null
     }
 
+
+    override fun visitExistsScalarExpression(ctx: CosmosDBSqlParser.ExistsScalarExpressionContext): BaseQueryExpression {
+        TODO("Nested Queries are not supported yet.")
+    }
+
+    override fun visitArrayScalarExpression(ctx: CosmosDBSqlParser.ArrayScalarExpressionContext): BaseQueryExpression {
+        TODO("Nested Queries are not supported yet.")
+    }
+
     companion object {
         private val compareTypeSet = setOf(
             CosmosDBSqlParser.Tokens.EQUAL.id,
@@ -121,6 +319,18 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
             CosmosDBSqlParser.Tokens.LE.id,
             CosmosDBSqlParser.Tokens.GE.id,
             CosmosDBSqlParser.Tokens.NOTEQUAL.id
+        )
+        private val multiplicationTypeSet = setOf(
+            CosmosDBSqlParser.Tokens.MUL.id,
+            CosmosDBSqlParser.Tokens.DIV.id,
+            CosmosDBSqlParser.Tokens.MOD.id,
+        )
+        private val additionTypeSet = setOf(
+            CosmosDBSqlParser.Tokens.ADD.id,
+            CosmosDBSqlParser.Tokens.SUB.id,
+            CosmosDBSqlParser.Tokens.BIT_AND_OP.id,
+            CosmosDBSqlParser.Tokens.BIT_OR_OP.id,
+            CosmosDBSqlParser.Tokens.BIT_XOR_OP.id
         )
     }
 }

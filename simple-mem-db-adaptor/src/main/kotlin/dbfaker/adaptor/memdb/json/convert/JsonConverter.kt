@@ -23,7 +23,7 @@ object JsonConverter {
             else if (node.isBoolean)
                 return BooleanValue.valueOf(node.booleanValue())
             else if (node.isNumber)
-                return NumberValue(node.doubleValue())
+                return NumberValue.valueOf(node.doubleValue())
         }
         throw IllegalArgumentException()
     }
@@ -44,7 +44,8 @@ object JsonConverter {
     fun toJson(value: BaseJsonValue): JsonNode? {
         return when (value) {
             is BooleanValue -> toJson(value)
-            is NumberValue -> toJson(value)
+            is LongValue -> toJson(value)
+            is DoubleValue -> toJson(value)
             is TextValue -> toJson(value)
             is ArrayValue -> toJson(value)
             is ObjectValue -> toJson(value)
@@ -55,7 +56,9 @@ object JsonConverter {
 
     fun toJson(value: BooleanValue) = BooleanNode.valueOf(value.value)
 
-    fun toJson(value: NumberValue) = DoubleNode.valueOf(value.value)
+    fun toJson(value: DoubleValue) = DoubleNode.valueOf(value.value)
+
+    fun toJson(value: LongValue) = LongNode.valueOf(value.value)
 
     fun toJson(value: TextValue) = TextNode.valueOf(value.value)
 

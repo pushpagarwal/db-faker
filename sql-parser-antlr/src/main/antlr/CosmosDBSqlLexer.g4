@@ -119,7 +119,6 @@ SUM:                          S U M;
 TAN:                          T A N;
 TRUNC:                        T R U N C;
 UPPER:                        U P P E R;
-
 // others
 
 SPACE:                        [ \t\r\n]+                       -> skip;
@@ -127,7 +126,7 @@ COMMENTS:                     '-' '-' ~[\t\r\n]+ [\t\r\n]     -> skip;
 
 // keywords type groups
 ID:                           [a-zA-Z_][a-zA-Z_0-9]*;
-NUMBER:                       [1-9][0-9]*;
+INTEGER:                      Digits;
 
 // operators
 COL:                          'C';
@@ -157,6 +156,36 @@ RIGHT_BRACKET:                ']';
 LEFT_PARENTHESIS:             '(';
 RIGHT_PARENTHESIS:            ')';
 QUOTE:                        '"'|'\'';
+
+
+NUMBER:
+    Digits '.' Digits? ExponentPart?
+        |	'.' Digits ExponentPart?
+        |	Digits ExponentPart
+        ;
+
+fragment
+ExponentPart
+	:	ExponentIndicator SignedInteger
+	;
+
+fragment
+ExponentIndicator
+	:
+	;
+fragment
+SignedInteger
+	:	Sign? Digits
+	;
+
+fragment
+Sign
+	:	[+-]
+	;
+
+fragment
+Digits
+ : [1-9][0-9]*;
 
 StringLiteral
 	:	'"' StringCharacters? '"'

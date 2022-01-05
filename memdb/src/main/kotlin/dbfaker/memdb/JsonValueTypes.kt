@@ -2,12 +2,13 @@ package dbfaker.memdb
 
 import com.fasterxml.jackson.core.JsonPointer
 import com.fasterxml.jackson.databind.node.ObjectNode
+import java.util.stream.Collectors
 
 sealed interface BaseJsonValue : JsonValue {
     override val isDefined: Boolean get() = true
-    override fun get(propertyName: String): JsonValue = UndefinedValue
-    override fun get(index: Int): JsonValue = UndefinedValue
-    override fun at(path: String): JsonValue = at(JsonPointer.valueOf(path))
+    override operator fun get(propertyName: String): BaseJsonValue = UndefinedValue
+    override fun get(index: Int): BaseJsonValue = UndefinedValue
+    override fun at(path: String): BaseJsonValue = at(JsonPointer.valueOf(path))
     fun at(ptr: JsonPointer): BaseJsonValue =
         if (ptr.matches()) this
         else internalAt(ptr)?.at(ptr.tail()) ?: UndefinedValue
@@ -28,26 +29,41 @@ data class TextValue(override val value: String) : BaseJsonValue {
     }
 }
 
-data class NumberValue(override val value: Double) : BaseJsonValue {
-
-    override val type: ValueType
-        get() = ValueType.NUMBER
+sealed interface NumberValue : BaseJsonValue {
+    override val value: Number
+    override val type: ValueType get() = ValueType.NUMBER
 
     override fun compareTo(other: JsonValue): Int {
+        val v = this.value
         return when (val oValue = other.value) {
-            is Double -> value.compareTo(oValue)
+            v -> 0
+            is Number -> v.toDouble().compareTo(oValue.toDouble())
             is String -> 1
             else -> -1
         }
     }
+
+    companion object {
+        fun valueOf(value: Double): NumberValue {
+            if (value.compareTo(value.toLong()) == 0)
+                return LongValue(value.toLong())
+            return DoubleValue(value)
+        }
+
+        fun valueOf(value: Long): LongValue = LongValue(value)
+    }
 }
+
+data class LongValue(override val value: Long) : NumberValue
+
+data class DoubleValue(override val value: Double) : NumberValue
 
 data class ArrayValue(override val value: List<BaseJsonValue>) : BaseJsonValue {
 
     override val type: ValueType
         get() = ValueType.ARRAY
 
-    override fun get(index: Int): JsonValue = value[index]
+    override fun get(index: Int): BaseJsonValue = value[index]
 
     override fun internalAt(ptr: JsonPointer): BaseJsonValue? = value[ptr.matchingIndex]
 
@@ -74,7 +90,7 @@ data class ObjectValue(override val value: Map<String, BaseJsonValue>) : BaseJso
     override fun compareTo(other: JsonValue): Int {
         return when (other) {
             is ArrayValue, NullValue, UndefinedValue -> -1
-            is ObjectNode ->
+            is ObjectValue ->
                 if (value == other.value) 0
                 else value.hashCode().compareTo(other.value.hashCode())
             else -> 1
@@ -141,3 +157,25 @@ object UndefinedValue : BaseJsonValue {
         }
     }
 }
+
+fun jsonValueOf(v: String) = TextValue(v)
+
+fun jsonValueOf(v: Long) = NumberValue.valueOf(v)
+
+fun jsonValueOf(v: Double) = NumberValue.valueOf(v)
+
+fun jsonValueOf(v: Boolean) = BooleanValue.valueOf(v)
+
+fun jsonValueOf(v: Any?): BaseJsonValue {
+    return when (v) {
+        is BaseJsonValue -> v
+        is String -> TextValue(v)
+        is Number -> NumberValue.valueOf(v.toDouble())
+        is Boolean -> BooleanValue.valueOf(v)
+        null -> NullValue
+        else -> throw IllegalArgumentException("Unsupported value $v")
+    }
+}
+
+inline fun <reified T> jsonValueOf(list: List<T>) =
+    ArrayValue(list.stream().map { jsonValueOf(it) }.collect(Collectors.toList()))

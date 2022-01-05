@@ -131,10 +131,6 @@ function_arg_list:
     | function_arg_list COMMA scalar_expression
     ;
 
-sys_function_name
-    : ID
-    ;
-
 udf_function_name
     : ID
     ;
@@ -150,10 +146,10 @@ scalar_expression
     ;
 
 logical_scalar_expression
-    : binary_expression
-    | in_scalar_expression
-    | logical_scalar_expression AND logical_scalar_expression
-    | logical_scalar_expression OR logical_scalar_expression
+    : binary_expression # logicalBinaryExpression
+    | in_scalar_expression # logicalScalarExpression
+    | logical_scalar_expression AND logical_scalar_expression # logicalANDExpression
+    | logical_scalar_expression OR logical_scalar_expression # logicalOrExpression
     ;
 
 between_scalar_expression
@@ -188,7 +184,7 @@ binary_expression:
 
 unary_expression:
     primary_expression
-    | unary_operator
+    | unary_operator primary_expression
     ;
 
 unary_operator:
@@ -219,6 +215,7 @@ constant
     | K_true      # constTrue
     | K_false     # constFalse
     | NUMBER      # constNumber
+    | INTEGER     # constInteger
     | StringLiteral # constText
     | array_constant # constArray
     | object_constant # constObject
@@ -244,4 +241,69 @@ object_constant_item
 object_constant_items
     : object_constant_item
     | object_constant_items COMMA object_constant_item
+    ;
+
+sys_function_name
+    : CONTAINS
+    |ABS
+    |ACOS
+    |ARRAY_CONCAT
+    |ARRAY_CONTAINS
+    |ARRAY_LENGTH
+    |ARRAY_SLICE
+    |ASIN
+    |ATAN
+    |ATN2
+    |AVG
+    |CEILING
+    |CONCAT
+    |CONTAINS
+    |COS
+    |COT
+    |COUNT
+    |DEGREES
+    |ENDSWITH
+    |EXP
+    |FLOOR
+    |INDEX_OF
+    |S_ARRAY
+    |IS_BOOL
+    |IS_DEFINED
+    |IS_FINITE_NUMBER
+    |IS_NULL
+    |IS_NUMBER
+    |IS_OBJECT
+    |IS_PRIMITIVE
+    |IS_STRING
+    |LENGTH
+    |LOG
+    |LOG10
+    |LOWER
+    |LTRIM
+    |MAX
+    |MIN
+    |PI
+    |POWER
+    |RADIANS
+    |RAND
+    |REPLACE
+    |REPLICATE
+    |REVERSE
+    |ROUND
+    |RTRIM
+    |SIGN
+    |SIN
+    |SQRT
+    |SQUARE
+    |ST_DISTANCE
+    |ST_INTERSECTS
+    |ST_ISVALID
+    |ST_ISVALIDDETAILED
+    |ST_WITHIN
+    |STARTSWITH
+    |SUBSTRING
+    |SUM
+    |TAN
+    |TRUNC
+    |UPPER
     ;

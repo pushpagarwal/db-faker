@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import dbfaker.ResourceId
 import dbfaker.adaptor.memdb.json.convert.JsonConverter
+import dbfaker.memdb.BaseJsonValue
 import dbfaker.memdb.JsonDocument
 import dbfaker.memdb.JsonValue
 import dbfaker.memdb.ObjectValue
@@ -32,10 +33,10 @@ class DbObject(private val root: ObjectValue, parentRid: ResourceId) : JsonDocum
     override val id: String
         get() = root.get("id").value as String
 
-    override fun at(path: String): JsonValue = root.at(path)
+    override fun at(path: String): BaseJsonValue = root.at(path)
 
 
-    override fun get(propertyName: String): JsonValue = root.get(propertyName)
+    override fun get(propertyName: String): BaseJsonValue = root.get(propertyName)
 
     companion object {
         private val dc: AtomicLong = AtomicLong()
