@@ -1,9 +1,11 @@
 package dbfaker.adaptor.memdb.dbconfig
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import dbfaker.PartitionKey
 import dbfaker.ResourceId
 import dbfaker.adaptor.memdb.DBCollection
+import dbfaker.adaptor.memdb.DbObject
 import dbfaker.memdb.InMemoryContainer
 import java.io.File
 import java.lang.IllegalArgumentException
@@ -27,7 +29,7 @@ data class ContainerConfig(
                     val text = it.toString()
                     throw IllegalArgumentException("Object expected but found:$text")
                 }
-                container.upsert(it).block()
+                container.upsert(DbObject.fromJson(it as ObjectNode, parentRid, false))
             }
         }
         return container

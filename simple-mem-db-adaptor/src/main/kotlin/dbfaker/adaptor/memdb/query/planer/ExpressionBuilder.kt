@@ -7,7 +7,9 @@ import java.util.stream.Collectors
 
 typealias QueryPredicate = (DbObject) -> Boolean
 
-class ExpressionBuilder(private val alias: String, private val doc: DbObject) {
+typealias SelectTransform = (DbObject) -> BaseJsonValue
+
+class ExpressionBuilder(private val alias: String?, private val doc: DbObject) {
 
     fun evaluate(expression: ScalarExpression): BaseJsonValue {
         return try {
@@ -16,7 +18,7 @@ class ExpressionBuilder(private val alias: String, private val doc: DbObject) {
                 is LongConst -> NumberValue.valueOf(expression.value)
                 is TextConst -> TextValue(expression.value)
                 is BooleanConst -> BooleanValue.valueOf(expression.value)
-                is IdPropertyPath -> doc.at(parsePropertyPath(expression.path))
+                is IdPropertyPath -> doc.at(parsePropertyPath(alias, expression.path))
                 is Property -> evaluateProperty(expression)
                 is Equality -> compare(expression) { it == 0 }
                 is NonEquality -> !(compare(expression) { it == 0 })
@@ -27,7 +29,7 @@ class ExpressionBuilder(private val alias: String, private val doc: DbObject) {
                 is BitComplement -> performIntExpression(expression) { a -> a.inv() }
                 is Negate -> performNumericExpression(expression) { a -> -a }
                 is Not -> performNot(expression)
-                is Id -> doc.get(expression.name)
+                is Id -> if (alias == expression.name) doc.at("") else doc.get(expression.name)
                 NullConst -> NullValue
                 UndefinedConst -> UndefinedValue
                 is Addition -> performAddition(expression)
@@ -173,23 +175,69 @@ class ExpressionBuilder(private val alias: String, private val doc: DbObject) {
         return ObjectValue(map)
     }
 
-    private fun parsePropertyPath(path: String): String {
-        val prefix = ".$alias."
-        if (path.startsWith(prefix)) {
-            return path.replaceFirst(".$alias", "").replace('.', '/')
-        }
-        throw IllegalArgumentException("Illegal path")
-    }
-
     companion object {
-        fun build(alias: String, expression: ScalarExpression): QueryPredicate {
+        fun buildPredicate(alias: String?, expression: ScalarExpression): QueryPredicate {
             return { doc: DbObject ->
                 when (val value = ExpressionBuilder(alias, doc).evaluate(expression)) {
                     is BooleanValue -> value.value
                     else -> false
                 }
             }
+        }
 
+        fun buildOrderBy(alias: String?, orderByItemList: OrderByItemList): Comparator<DbObject> {
+            return orderByItemList.elements.stream()
+                .map { item -> Pair(parsePropertyPath(alias, item.property.path), item.descending) }
+                .map { p ->
+                    val cmp = Comparator.comparing<DbObject, BaseJsonValue> { doc -> doc.at(p.first) }
+                    if (p.second) cmp.reversed() else cmp
+                }
+                .reduce { c1, c2 -> c1.thenComparing(c2) }
+                .orElseThrow { IllegalStateException() }
+        }
+
+        fun buildSelection(alias: String?, selectExpression: SelectExpression): SelectTransform {
+            return when (selectExpression) {
+                is SelectValueExpression -> { doc -> buildSelectionValue(alias, selectExpression.expression, doc) }
+                is SelectItemList -> { doc -> buildSelectionList(alias, selectExpression.elements, doc) }
+            }
+        }
+
+        private fun buildSelectionValue(
+            alias: String?,
+            scalarExpression: ScalarExpression,
+            doc: DbObject
+        ): BaseJsonValue = ExpressionBuilder(alias, doc).evaluate(scalarExpression)
+
+
+        private fun buildSelectionList(
+            alias: String?,
+            items: List<SelectItem>,
+            doc: DbObject
+        ): BaseJsonValue {
+            val builder = ExpressionBuilder(alias, doc)
+            var index = 0
+            val m = items.stream()
+                .map {
+                    Pair(getName(it.alias, it.expression, ++index), builder.evaluate(it.expression))
+                }
+                .collect(Collectors.toUnmodifiableMap({ p -> p.first }, { p -> p.second }))
+            return ObjectValue(m)
+        }
+
+        private fun getName(alias: String?, scalarExpression: ScalarExpression, index: Int): String {
+            return alias ?: if (scalarExpression is PropertyExpression) {
+                scalarExpression.path.substringAfterLast('.')
+            } else
+                "\$$index"
+        }
+
+        private fun parsePropertyPath(alias: String?, path: String): String {
+            val prefix = ".$alias."
+            if (alias != null && path.startsWith(prefix)) {
+                return path.replaceFirst(".$alias", "").replace('.', '/')
+            }
+            throw IllegalArgumentException("Illegal path")
         }
 
     }

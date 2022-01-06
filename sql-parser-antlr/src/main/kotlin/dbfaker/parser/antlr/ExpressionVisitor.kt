@@ -8,10 +8,12 @@ import java.util.stream.Collectors
 class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
     private lateinit var aliasList: List<String>
     override fun visitSql_query(ctx: CosmosDBSqlParser.Sql_queryContext): BaseQueryExpression {
-        val alias = ctx.findFrom_clause()?.accept(this) as Id
-        aliasList = listOf(alias.name)
+        val alias = ctx.findFrom_clause()?.accept(this) as Id?
+        aliasList = if (alias != null) listOf(alias.name) else listOf()
         val condition = ctx.findWhere_clause()?.accept(this) as ScalarExpression?
-        return QueryExpression(alias.name, condition ?: BooleanConst(true))
+        val orderByItemList = ctx.findOrderby_clause()?.accept(this) as OrderByItemList?
+        val selectExpression = ctx.findSelect_clause()!!.accept(this) as SelectExpression
+        return QueryExpression(alias?.name, condition, orderByItemList, selectExpression)
     }
 
     override fun visitFrom_clause(ctx: CosmosDBSqlParser.From_clauseContext): BaseQueryExpression {
@@ -21,6 +23,8 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
     override fun visitFrom_specification(ctx: CosmosDBSqlParser.From_specificationContext): BaseQueryExpression {
         if (ctx.JOIN() != null)
             TODO("Join are not supported yet")
+        if (ctx.findFrom_specification() != null)
+            TODO("Nested/complex types are not supported.")
         return ctx.findPrimary_from_specification()!!.accept(this)
     }
 
@@ -35,7 +39,7 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
     override fun visitInputAliasExpression(ctx: CosmosDBSqlParser.InputAliasExpressionContext): BaseQueryExpression {
         val alias = ctx.ID()?.text
         if (alias == null || !aliasList.contains(alias))
-            throw IllegalArgumentException("Wrong alias Value")
+            throw IllegalArgumentException("Wrong alias Value.")
         return Id(alias)
     }
 
@@ -176,7 +180,7 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
 
     override fun visitArray_constant(ctx: CosmosDBSqlParser.Array_constantContext): BaseQueryExpression {
         val list = ctx.findArray_constant_list()!!.accept(this) as TemporaryConstExpressionList
-        return ArrayConst(list.list)
+        return ArrayConst(list)
     }
 
     override fun visitArray_constant_list(ctx: CosmosDBSqlParser.Array_constant_listContext): BaseQueryExpression {
@@ -184,13 +188,13 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
             ?: TemporaryConstExpressionList()) as TemporaryConstExpressionList
         val constExpr = ctx.findConstant()?.accept(this) as ConstExpression?
         if (constExpr != null)
-            list.list.add(constExpr)
+            list.items.add(constExpr)
         return list
     }
 
     override fun visitObject_constant(ctx: CosmosDBSqlParser.Object_constantContext): BaseQueryExpression {
         val list = ctx.findObject_constant_items()!!.accept(this) as TemporaryConstPropertyList
-        val map = list.list.stream()
+        val map = list.items.stream()
             .collect(Collectors.toUnmodifiableMap({ it.key }, { it.value }))
         return ObjectConst(map)
     }
@@ -200,7 +204,7 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
             ?: TemporaryConstPropertyList()) as TemporaryConstPropertyList
         val constProperty = ctx.findObject_constant_item()?.accept(this) as TemporaryConstProperty?
         if (constProperty != null)
-            list.list.add(constProperty)
+            list.items.add(constProperty)
         return list
     }
 
@@ -213,7 +217,7 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
     override fun visitIn_scalar_expression(ctx: CosmosDBSqlParser.In_scalar_expressionContext): BaseQueryExpression {
         val left = ctx.findBinary_expression()!!.accept(this) as ScalarExpression
         val right = ctx.findIn_scalar_expression_item_list()!!.accept(this) as TemporaryScalarExpressionList
-        val expr = InExpression(left, right.list)
+        val expr = InExpression(left, right.items)
         return if (ctx.NOT() != null) Not(expr) else expr
     }
 
@@ -223,13 +227,13 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
             ?: TemporaryScalarExpressionList()) as TemporaryScalarExpressionList
         val right = ctx.findScalar_expression()?.accept(this) as ScalarExpression?
         if (right != null)
-            left.list.add(right)
+            left.items.add(right)
         return left
     }
 
     override fun visitArray_create_expression(ctx: CosmosDBSqlParser.Array_create_expressionContext): BaseQueryExpression {
         val expressionList = ctx.findArray_item_list()!!.accept(this) as TemporaryScalarExpressionList
-        return ArrayCreation(expressionList.list)
+        return ArrayCreation(expressionList)
     }
 
     override fun visitArray_item_list(ctx: CosmosDBSqlParser.Array_item_listContext): BaseQueryExpression {
@@ -237,13 +241,13 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
             ?: TemporaryScalarExpressionList()) as TemporaryScalarExpressionList
         val right = ctx.findScalar_expression()?.accept(this) as ScalarExpression?
         if (right != null)
-            left.list.add(right)
+            left.items.add(right)
         return left
     }
 
     override fun visitObject_create_expression(ctx: CosmosDBSqlParser.Object_create_expressionContext): BaseQueryExpression {
         val list = ctx.findObject_property_list()!!.accept(this) as TemporaryScalarPropertyList
-        val map = list.list.stream()
+        val map = list.items.stream()
             .collect(Collectors.toUnmodifiableMap({ it.key }, { it.value }))
         return ObjectCreation(map)
     }
@@ -253,7 +257,7 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
             ?: TemporaryConstPropertyList()) as TemporaryScalarPropertyList
         val property = ctx.findObject_property()?.accept(this) as TemporaryScalarProperty?
         if (property != null)
-            list.list.add(property)
+            list.items.add(property)
         return list
     }
 
@@ -268,7 +272,7 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
             TODO("UDF functions are not supported yet.")
         val name = ctx.findSys_function_name()?.accept(this) as Id
         val arguments = ctx.findFunction_arg_list()?.accept(this) as TemporaryScalarExpressionList?
-        return FunctionCall(name, arguments?.list ?: listOf())
+        return FunctionCall(name, arguments?.items ?: listOf())
     }
 
     override fun visitFunction_arg_list(ctx: CosmosDBSqlParser.Function_arg_listContext): BaseQueryExpression {
@@ -276,12 +280,80 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
             ?: TemporaryScalarExpressionList()) as TemporaryScalarExpressionList
         val right = ctx.findScalar_expression()?.accept(this) as ScalarExpression?
         if (right != null)
-            left.list.add(right)
+            left.items.add(right)
         return left
     }
 
     override fun visitSys_function_name(ctx: CosmosDBSqlParser.Sys_function_nameContext): BaseQueryExpression {
         return Id(ctx.text)
+    }
+
+    override fun visitOrderby_clause(ctx: CosmosDBSqlParser.Orderby_clauseContext): BaseQueryExpression {
+        val list = ctx.findOrderby_item_list()!!.accept(this) as TemporaryOrderByItemList
+        return OrderByItemList(list)
+    }
+
+    override fun visitOrderby_item_list(ctx: CosmosDBSqlParser.Orderby_item_listContext): BaseQueryExpression {
+        val left: TemporaryOrderByItemList = (ctx.findOrderby_item_list()?.accept(this)
+            ?: TemporaryOrderByItemList()) as TemporaryOrderByItemList
+        val right = ctx.findOrderby_item()?.accept(this) as OrderByItem?
+        if (right != null)
+            left.items.add(right)
+        return left
+    }
+
+    override fun visitOrderby_item(ctx: CosmosDBSqlParser.Orderby_itemContext): BaseQueryExpression {
+        return when (val expr = ctx.findScalar_expression()!!.accept(this)) {
+            is PropertyExpression -> OrderByItem(expr, ctx.DESC() != null)
+            else -> throw IllegalArgumentException("Only properties are supported as order by item.")
+        }
+    }
+
+    override fun visitSelect_clause(ctx: CosmosDBSqlParser.Select_clauseContext): BaseQueryExpression {
+        if (ctx.findTop_spec() != null)
+            TODO("Top queries are not supported yet.")
+        return ctx.findSelection()!!.accept(this)
+    }
+
+    override fun visitSelection(ctx: CosmosDBSqlParser.SelectionContext): BaseQueryExpression {
+        return findSelectList(ctx)
+            ?: (ctx.findSelect_value_spec()?.accept(this)
+                ?: ctx.MUL()?.let {
+                    if (aliasList.isEmpty())
+                        throw IllegalArgumentException("Select * is supported with collection only.")
+                    else
+                        SelectValueExpression(Id(aliasList[0]))
+                }
+                ?: throw IllegalArgumentException("Invalid select clause."))
+    }
+
+    private fun findSelectList(ctx: CosmosDBSqlParser.SelectionContext): SelectItemList? {
+        val list = ctx.findSelect_list()?.accept(this) as TemporarySelectItemList?
+        return list?.let { SelectItemList(list) }
+    }
+
+    override fun visitSelect_value_spec(ctx: CosmosDBSqlParser.Select_value_specContext): BaseQueryExpression {
+        val expr = ctx.findScalar_expression()!!.accept(this) as ScalarExpression
+        return SelectValueExpression(expr)
+    }
+
+    override fun visitSelect_list(ctx: CosmosDBSqlParser.Select_listContext): BaseQueryExpression {
+        val left: TemporarySelectItemList = (ctx.findSelect_list()?.accept(this)
+            ?: TemporarySelectItemList()) as TemporarySelectItemList
+        val right = ctx.findSelect_item()?.accept(this) as SelectItem?
+        if (right != null)
+            left.items.add(right)
+        return left
+    }
+
+    override fun visitSelect_item(ctx: CosmosDBSqlParser.Select_itemContext): BaseQueryExpression {
+        val expr = ctx.findScalar_expression()!!.accept(this) as ScalarExpression
+        val alias = ctx.findSelect_alias()?.accept(this) as Id?
+        return SelectItem(expr, alias?.name)
+    }
+
+    override fun visitSelect_alias(ctx: CosmosDBSqlParser.Select_aliasContext): BaseQueryExpression {
+        return Id(ctx.ID()!!.text)
     }
 
     private fun getToken(ctx: ParserRuleContext, types: Set<Int>): TerminalNode? {

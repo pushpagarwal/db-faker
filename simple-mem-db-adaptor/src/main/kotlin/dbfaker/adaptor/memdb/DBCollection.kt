@@ -1,8 +1,13 @@
 package dbfaker.adaptor.memdb
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import dbfaker.*
+import dbfaker.CosmosCollection
+import dbfaker.PartitionKey
+import dbfaker.QueryResponseItem
+import dbfaker.ResourceId
+import dbfaker.adaptor.memdb.json.convert.JsonConverter
 import dbfaker.adaptor.memdb.query.planer.QueryBuilder
 import dbfaker.memdb.InMemoryContainer
 import dbfaker.parser.SqlParser
@@ -26,6 +31,7 @@ class DBCollection(
     override fun upsert(obj: JsonNode): Mono<JsonNode> =
         Mono.justOrEmpty(c.upsert(DbObject.fromJson(obj as ObjectNode, rid)).toJson())
 
+    fun upsert(obj: DbObject) = c.upsert(obj)
 
     override fun updateOnlyIfExist(obj: JsonNode, ifMatch: String?): Mono<JsonNode> =
         Mono.justOrEmpty(
@@ -36,10 +42,13 @@ class DBCollection(
     override fun query(query: String, startCursor: String?): Flux<QueryResponseItem> {
         val queryExpression = SqlParser.parse(query)
         val q = QueryBuilder.buildQuery(queryExpression)
-        return Flux.fromStream(
-            c.stream()
-                .filter(q.predicate)
-                .map { DbQueryResponseItem(it.toJson(), "") }
-        )
+        return if (q.fromAlias != null) {
+            var stream = c.stream()
+            stream = q.orderBy?.let { stream.sorted(q.orderBy) } ?: stream
+            stream = q.predicate?.let { stream.filter(q.predicate) } ?: stream
+            Flux.fromStream(stream).map(q.selection)
+        } else {
+            Flux.just(q.selection.invoke(DbObject.fromJson(ObjectNode(JsonNodeFactory.instance), ResourceId())))
+        }.map { DbQueryResponseItem(JsonConverter.toJson(it), "") }
     }
 }

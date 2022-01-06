@@ -6,6 +6,7 @@ import org.antlr.v4.kotlinruntime.CharStreams
 import org.antlr.v4.kotlinruntime.CommonTokenStream
 import dbfaker.parser.antlr.ExpressionVisitor
 import dbfaker.parser.model.QueryExpression
+import org.antlr.v4.kotlinruntime.BailErrorStrategy
 
 object SqlParser {
     fun parse(queryStr: String): QueryExpression {

@@ -41,7 +41,7 @@ object JsonConverter {
         return ArrayValue(children)
     }
 
-    fun toJson(value: BaseJsonValue): JsonNode? {
+    fun toJson(value: BaseJsonValue): JsonNode {
         return when (value) {
             is BooleanValue -> toJson(value)
             is LongValue -> toJson(value)

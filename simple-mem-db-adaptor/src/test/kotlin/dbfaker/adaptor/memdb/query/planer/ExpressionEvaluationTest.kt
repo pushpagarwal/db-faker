@@ -27,58 +27,63 @@ class ExpressionEvaluationTest {
     }
 
     @Test
-    fun testSomeSimpleExpr() {
+    fun testSomeSimpleCondition() {
         Assert.assertEquals(true.compareTo(true), 0)
-        testSimple("true", true)
-        testSimple("true and true", true)
-        testSimple("true and false", false)
-        testSimple("false or false", false)
-        testSimple("true or false", true)
-        testSimple("4", 4L)
-        testSimple("4.0", 4L)
-        testSimple("4.3", 4.3)
-        testSimple("4!=5", true)
-        testSimple("3.4<4", true)
-        testSimple("4<3", false)
-        testSimple("4<=4", true)
-        testSimple("4<=3", false)
-        testSimple("5>=3", true)
-        testSimple("6 between 5 and 8", true)
-        testSimple("10 between 5 and 8", false)
-        testSimple("6 not between 5 and 8", false)
-        testSimple("10 not between 5 and 8", true)
+        testSimpleCondition("true", true)
+        testSimpleCondition("true and true", true)
+        testSimpleCondition("true and false", false)
+        testSimpleCondition("false or false", false)
+        testSimpleCondition("true or false", true)
+        testSimpleCondition("4", 4L)
+        testSimpleCondition("4.0", 4L)
+        testSimpleCondition("4.3", 4.3)
+        testSimpleCondition("4!=5", true)
+        testSimpleCondition("3.4<4", true)
+        testSimpleCondition("4<3", false)
+        testSimpleCondition("4<=4", true)
+        testSimpleCondition("4<=3", false)
+        testSimpleCondition("5>=3", true)
+        testSimpleCondition("6 between 5 and 8", true)
+        testSimpleCondition("10 between 5 and 8", false)
+        testSimpleCondition("6 not between 5 and 8", false)
+        testSimpleCondition("10 not between 5 and 8", true)
 
-        testSimple("c.id", "db993447-c9cd-48ff-a333-2e8f366dcfc8")
-        testSimple("c.id=\"db993447-c9cd-48ff-a333-2e8f366dcfc8\"", true)
-        testSimple("c.data.trackingOptions.openTrackingEnabled=true", true)
-        testSimple("(c.data.trackingOptions).openTrackingEnabled=true", true)
-        testSimple("c.data.status in(\"DRAFT\",\"PUBLISHING\")", true)
-        testSimple("c.data.status in(\"PUBLISHED\",\"PUBLISHING\")", false)
-        testSimple("c.data.status not in(\"PUBLISHED\",\"PUBLISHING\")", true)
-        testSimple("c.data.status not in(\"DRAFT\",\"PUBLISHING\")", false)
+        testSimpleCondition("c.id", "db993447-c9cd-48ff-a333-2e8f366dcfc8")
+        testSimpleCondition("c.id=\"db993447-c9cd-48ff-a333-2e8f366dcfc8\"", true)
+        testSimpleCondition("c.data.trackingOptions.openTrackingEnabled=true", true)
+        testSimpleCondition("(c.data.trackingOptions).openTrackingEnabled=true", true)
+        testSimpleCondition("c.data.status in(\"DRAFT\",\"PUBLISHING\")", true)
+        testSimpleCondition("c.data.status in(\"PUBLISHED\",\"PUBLISHING\")", false)
+        testSimpleCondition("c.data.status not in(\"PUBLISHED\",\"PUBLISHING\")", true)
+        testSimpleCondition("c.data.status not in(\"DRAFT\",\"PUBLISHING\")", false)
     }
 
     @Test
     fun testArrayExpressions() {
-        testSimple("[2,3,4,5][1]=3", true)
-        testSimple("[\"abc\",\"bsd\",\"cgh\"][2]=\"cgh\"", true)
-        testSimple("[2,3,4,5]=[2,3,4,5]", true)
+        testSimpleCondition("[2,3,4,5][1]=3", true)
+        testSimpleCondition("[\"abc\",\"bsd\",\"cgh\"][2]=\"cgh\"", true)
+        testSimpleCondition("[2,3,4,5]=[2,3,4,5]", true)
     }
 
     @Test
     fun testObjectExpressions() {
-        testSimple("{a:2,b:3}.b=3", true)
-        testSimple("{a:2,b:3}={a:2,b:3}", true)
+        testSimpleCondition("{a:2,b:3}.b=3", true)
+        testSimpleCondition("{a:2,b:3}={a:2,b:3}", true)
     }
 
     @Test
     fun testFunctionCall() {
-        testSimple("CONTAINS(\"Test307\",\"307\",true)", true)
+        testSimpleCondition("CONTAINS(\"Test307\",\"307\",true)", true)
     }
 
-    private fun testSimple(exprStr: String, expectedValue: Any) {
+    @Test(expected = IllegalArgumentException::class)
+    fun testParsingFailure() {
+        testSimpleCondition("a==b", true)
+    }
+
+    private fun testSimpleCondition(exprStr: String, expectedValue: Any) {
         val expr = SqlParser.parse("select * from c where $exprStr")
-        Assert.assertEquals(expectedValue, evaluator.evaluate(expr.condition).value)
+        Assert.assertEquals(expectedValue, evaluator.evaluate(expr.condition!!).value)
     }
 
     private fun readFile(vararg path: String?): InputStream {

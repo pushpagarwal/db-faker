@@ -5,7 +5,38 @@ sealed interface BaseQueryExpression
 
 sealed interface ScalarExpression : BaseQueryExpression
 
-data class QueryExpression(val alias: String, val condition: ScalarExpression) : BaseQueryExpression
+data class QueryExpression(
+    val alias: String?,
+    val condition: ScalarExpression?,
+    val orderBy: OrderByItemList?,
+    val selectExpression: SelectExpression,
+) : BaseQueryExpression
+
+data class OrderByItem(
+    val property: PropertyExpression,
+    val descending: Boolean = false
+) : BaseQueryExpression
+
+data class OrderByItemList(
+    override val elements: List<OrderByItem>
+) : BaseQueryExpression, ArrayExpression<OrderByItem> {
+    constructor(list: TemporaryOrderByItemList) : this(list.toList())
+}
+
+sealed interface SelectExpression : BaseQueryExpression
+
+data class SelectItem(
+    val expression: ScalarExpression,
+    val alias: String?
+) : BaseQueryExpression
+
+data class SelectItemList(
+    override val elements: List<SelectItem>
+) : SelectExpression, ArrayExpression<SelectItem> {
+    constructor(list: TemporarySelectItemList) : this(list.toList())
+}
+
+data class SelectValueExpression(val expression: ScalarExpression) : SelectExpression
 
 sealed interface PropertyExpression : ScalarExpression {
     val path: String
@@ -24,9 +55,10 @@ data class Id(val name: String) : PropertyExpression {
     override val path: String get() = ".${name}"
 }
 
-interface ArrayExpression<T : ScalarExpression> {
+interface ArrayExpression<T : BaseQueryExpression> {
     val elements: List<T>
 }
+
 
 interface ObjectExpression<T : ScalarExpression> {
     val properties: Map<Id, T>
@@ -42,7 +74,10 @@ data class BooleanConst(val value: Boolean) : ConstExpression
 
 data class TextConst(val value: String) : ConstExpression
 
-data class ArrayConst(override val elements: List<ConstExpression>) : ConstExpression, ArrayExpression<ConstExpression>
+data class ArrayConst(override val elements: List<ConstExpression>) : ConstExpression,
+    ArrayExpression<ConstExpression> {
+    constructor(list: TemporaryConstExpressionList) : this(list.toList())
+}
 
 data class ObjectConst(override val properties: Map<Id, ConstExpression>) : ConstExpression,
     ObjectExpression<ConstExpression>
@@ -53,7 +88,9 @@ object UndefinedConst : ConstExpression
 
 
 data class ArrayCreation(override val elements: List<ScalarExpression>) : ScalarExpression,
-    ArrayExpression<ScalarExpression>
+    ArrayExpression<ScalarExpression> {
+    constructor(list: TemporaryScalarExpressionList) : this(list.toList())
+}
 
 data class ObjectCreation(override val properties: Map<Id, ScalarExpression>) : ScalarExpression,
     ObjectExpression<ScalarExpression>
@@ -167,20 +204,34 @@ data class FunctionCall(
 
 interface TemporaryExpression : BaseQueryExpression
 
-data class TemporaryScalarExpressionList(val list: MutableList<ScalarExpression> = mutableListOf()) :
-    TemporaryExpression
+interface TemporaryList<T> {
+    val items: MutableList<T>
+}
 
-data class TemporaryConstExpressionList(val list: MutableList<ConstExpression> = mutableListOf()) :
-    TemporaryExpression
+inline fun <reified T> TemporaryList<T>.toList(): List<T> {
+    return items.toList()
+}
+
+data class TemporaryScalarExpressionList(override val items: MutableList<ScalarExpression> = mutableListOf()) :
+    TemporaryExpression, TemporaryList<ScalarExpression>
+
+data class TemporaryConstExpressionList(override val items: MutableList<ConstExpression> = mutableListOf()) :
+    TemporaryExpression, TemporaryList<ConstExpression>
 
 data class TemporaryConstProperty(override val key: Id, override val value: ConstExpression) : TemporaryExpression,
     Map.Entry<Id, ConstExpression>
 
-data class TemporaryConstPropertyList(val list: MutableList<TemporaryConstProperty> = mutableListOf()) :
-    TemporaryExpression
+data class TemporaryConstPropertyList(override val items: MutableList<TemporaryConstProperty> = mutableListOf()) :
+    TemporaryExpression, TemporaryList<TemporaryConstProperty>
 
 data class TemporaryScalarProperty(override val key: Id, override val value: ScalarExpression) : TemporaryExpression,
     Map.Entry<Id, ScalarExpression>
 
-data class TemporaryScalarPropertyList(val list: MutableList<TemporaryScalarProperty> = mutableListOf()) :
-    TemporaryExpression
+data class TemporaryScalarPropertyList(override val items: MutableList<TemporaryScalarProperty> = mutableListOf()) :
+    TemporaryExpression, TemporaryList<TemporaryScalarProperty>
+
+data class TemporaryOrderByItemList(override val items: MutableList<OrderByItem> = mutableListOf()) :
+    TemporaryExpression, TemporaryList<OrderByItem>
+
+data class TemporarySelectItemList(override val items: MutableList<SelectItem> = mutableListOf()) :
+    TemporaryExpression, TemporaryList<SelectItem>

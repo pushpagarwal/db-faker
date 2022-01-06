@@ -66,7 +66,7 @@ class DbDocumentHandler(private val dbInterface: DbInterface) {
         return handleDbCollectionResponse(mono)
     }
 
-    fun <T> handleDbCollectionResponse(dbObjectMono: Mono<T>): Mono<ServerResponse> {
+    fun <T : Any> handleDbCollectionResponse(dbObjectMono: Mono<T>): Mono<ServerResponse> {
         return dbObjectMono
             .flatMap { v -> ServerResponse.ok().bodyValue(v) }
             .onErrorResume(NotFound::class.java) { ServerResponse.notFound().build() }
