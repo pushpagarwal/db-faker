@@ -4,6 +4,7 @@ import dbfaker.DbInterface
 import dbfaker.cosmos.dto.DatabaseMapper
 import dbfaker.cosmos.dto.DatabasesDto
 import dbfaker.cosmos.dto.RootDto
+import dbfaker.memdb.exceptions.NotFound
 import org.mapstruct.factory.Mappers
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -34,7 +35,7 @@ class DbHandler(private val dbInterface: DbInterface) {
                     .header("etag", dto!!._etag)
                     .bodyValue(dto)
             }
-            .switchIfEmpty(ServerResponse.notFound().build())
+            .switchIfEmpty(Mono.error(NotFound()))
     }
 
 }

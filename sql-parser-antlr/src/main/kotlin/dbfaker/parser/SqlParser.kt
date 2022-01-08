@@ -13,6 +13,8 @@ object SqlParser {
         val charStream = CharStreams.fromString(queryStr)
         val lexer = CosmosDBSqlLexer(charStream)
         val parser = CosmosDBSqlParser(CommonTokenStream(lexer))
+        parser.removeErrorListeners()
+        parser.addErrorListener(ThrowingErrorListener)
         return ExpressionVisitor().visitRoot(parser.root()) as QueryExpression
     }
 }

@@ -3,6 +3,7 @@ package dbfaker.cosmos.handlers
 import dbfaker.CosmosDataBase
 import dbfaker.DbInterface
 import dbfaker.cosmos.dto.CollectionMapper
+import dbfaker.memdb.exceptions.NotFound
 import org.mapstruct.factory.Mappers
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -28,6 +29,6 @@ class CollectionHandler(private val dbInterface: DbInterface) {
         return dbInterface.queryContainer(dbId, colId)
             .map { c -> Mappers.getMapper(CollectionMapper::class.java).toDto(c)}
             .flatMap { dto -> ServerResponse.ok().bodyValue(dto) }
-            .switchIfEmpty(ServerResponse.notFound().build())
+            .switchIfEmpty(Mono.error(NotFound()))
     }
 }

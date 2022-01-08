@@ -13,6 +13,8 @@ import dbfaker.memdb.InMemoryContainer
 import dbfaker.parser.SqlParser
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.scheduler.Scheduler
+import reactor.core.scheduler.Schedulers
 import java.time.Instant
 import java.util.*
 
@@ -46,7 +48,9 @@ class DBCollection(
             var stream = c.stream()
             stream = q.orderBy?.let { stream.sorted(q.orderBy) } ?: stream
             stream = q.predicate?.let { stream.filter(q.predicate) } ?: stream
-            Flux.fromStream(stream).map(q.selection)
+            Flux.fromStream(stream)
+                .subscribeOn(Schedulers.parallel())
+                .map(q.selection)
         } else {
             Flux.just(q.selection.invoke(DbObject.fromJson(ObjectNode(JsonNodeFactory.instance), ResourceId())))
         }.map { DbQueryResponseItem(JsonConverter.toJson(it), "") }

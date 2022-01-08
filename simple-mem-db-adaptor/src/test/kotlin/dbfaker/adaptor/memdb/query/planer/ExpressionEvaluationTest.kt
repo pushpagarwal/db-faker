@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dbfaker.ResourceId
 import dbfaker.adaptor.memdb.DbObject
 import dbfaker.parser.SqlParser
+import dbfaker.parser.error.ParseCancellationException
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
@@ -76,7 +77,7 @@ class ExpressionEvaluationTest {
         testSimpleCondition("CONTAINS(\"Test307\",\"307\",true)", true)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test(expected = ParseCancellationException::class)
     fun testParsingFailure() {
         testSimpleCondition("a==b", true)
     }

@@ -1,13 +1,10 @@
 package dbfaker.cosmos.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ObjectNode
 import dbfaker.DbInterface
 import dbfaker.QueryResponseItem
 import dbfaker.cosmos.dto.QueryRequest
 import dbfaker.cosmos.dto.QueryResponse
-import dbfaker.memdb.exceptions.NotFound
-import dbfaker.memdb.exceptions.PreConditionFailed
 import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -21,10 +18,10 @@ class DbDocumentHandler(private val dbInterface: DbInterface) {
         val dbId = serverRequest.pathVariable("dbId")
         val colId = serverRequest.pathVariable("colId")
         val docId = serverRequest.pathVariable("docId")
-        val mono = dbInterface.queryContainer(dbId, colId)
+        return dbInterface.queryContainer(dbId, colId)
             .flatMap { container -> container.getById(docId) }
+            .flatMap { v -> ServerResponse.ok().bodyValue(v) }
 
-        return handleDbCollectionResponse(mono)
     }
 
     fun create(serverRequest: ServerRequest): Mono<ServerResponse> {
@@ -32,9 +29,9 @@ class DbDocumentHandler(private val dbInterface: DbInterface) {
         val colId = serverRequest.pathVariable("colId")
         val jsonMono = serverRequest.bodyToMono(JsonNode::class.java)
         val containerMono = dbInterface.queryContainer(dbId, colId)
-        val mono = Mono.zip(jsonMono, containerMono)
+        return Mono.zip(jsonMono, containerMono)
             .flatMap { t -> t.t2.upsert(t.t1) }
-        return handleDbCollectionResponse(mono)
+            .flatMap { v -> ServerResponse.ok().bodyValue(v) }
     }
 
     fun updateById(serverRequest: ServerRequest): Mono<ServerResponse> {
@@ -48,9 +45,10 @@ class DbDocumentHandler(private val dbInterface: DbInterface) {
             }
 
         val containerMono = dbInterface.queryContainer(dbId, colId)
-        val mono = Mono.zip(jsonMono, containerMono)
+        return Mono.zip(jsonMono, containerMono)
             .flatMap { t -> t.t2.updateOnlyIfExist(t.t1, ifMatch) }
-        return handleDbCollectionResponse(mono)
+            .flatMap { v -> ServerResponse.ok().bodyValue(v) }
+
     }
 
     fun query(serverRequest: ServerRequest): Mono<ServerResponse> {
@@ -58,19 +56,12 @@ class DbDocumentHandler(private val dbInterface: DbInterface) {
         val colId = serverRequest.pathVariable("colId")
         val jsonMono = serverRequest.bodyToMono(QueryRequest::class.java)
         val containerMono = dbInterface.queryContainer(dbId, colId)
-        val mono = Mono.zip(jsonMono, containerMono)
+        return Mono.zip(jsonMono, containerMono)
             .flatMapMany { t -> t.t2.query(t.t1.query) }
             .map(QueryResponseItem::item)
             .collectList()
             .map { list -> QueryResponse("", list.size, list) }
-        return handleDbCollectionResponse(mono)
-    }
-
-    fun <T : Any> handleDbCollectionResponse(dbObjectMono: Mono<T>): Mono<ServerResponse> {
-        return dbObjectMono
             .flatMap { v -> ServerResponse.ok().bodyValue(v) }
-            .onErrorResume(NotFound::class.java) { ServerResponse.notFound().build() }
-            .onErrorResume(PreConditionFailed::class.java) { ServerResponse.status(409).build() }
     }
 
 
