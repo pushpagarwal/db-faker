@@ -1,6 +1,7 @@
 package dbfaker
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -25,5 +26,5 @@ interface CosmosCollection {
     fun getById(id: String): Mono<JsonNode>
     fun upsert(obj: JsonNode): Mono<JsonNode>
     fun updateOnlyIfExist(obj: JsonNode, ifMatch: String? = null): Mono<JsonNode>
-    fun query(query: String, startCursor: String? = null): Flux<QueryResponseItem>
+    fun query(query: String, params: ObjectNode?, startCursor: String? = null): Flux<QueryResponseItem>
 }

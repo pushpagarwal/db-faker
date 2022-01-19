@@ -56,75 +56,13 @@ WITH:                         W I T H;
 Infinity:                     'Infinity';     // case sensitive
 NaN:                          'NaN';          // case sensitive
 
-// build-in functions
-
-ABS:                          A B S;
-ACOS:                         A C O S;
-ARRAY_CONCAT:                 A R R A Y '_' C O N C A T;
-ARRAY_CONTAINS:               A R R A Y '_' C O N T A I N S;
-ARRAY_LENGTH:                 A R R A Y '_' L E N G T H;
-ARRAY_SLICE:                  A R R A Y '_' S L I C E;
-ASIN:                         A S I N;
-ATAN:                         A T A N;
-ATN2:                         A T N '2';
-AVG:                          A V G;
-CEILING:                      C E I L I N G;
-CONCAT:                       C O N C A T;
-CONTAINS:                     C O N T A I N S;
-COS:                          C O S;
-COT:                          C O T;
-COUNT:                        C O U N T;
-DEGREES:                      D E G R E E S;
-ENDSWITH:                     E N D S W I T H;
-EXP:                          E X P;
-FLOOR:                        F L O O R;
-INDEX_OF:                     I N D E X '_' O F;
-S_ARRAY:                      I S '_' A R R A Y;
-IS_BOOL:                      I S '_' B O O L;
-IS_DEFINED:                   I S '_' D E F I N E D;
-IS_FINITE_NUMBER:             I S '_' F I N I T E '_' N U M B E R;
-IS_NULL:                      I S '_' N U L L;
-IS_NUMBER:                    I S '_' N U M B E R;
-IS_OBJECT:                    I S '_' O B J E C T;
-IS_PRIMITIVE:                 I S '_' P R I M I T I V E;
-IS_STRING:                    I S '_' S T R I N G;
-LENGTH:                       L E N G T H;
-LOG:                          L O G;
-LOG10:                        L O G '1' '0';
-LOWER:                        L O W E R;
-LTRIM:                        L T R I M;
-MAX:                          M A X;
-MIN:                          M I N;
-PI:                           P I;
-POWER:                        P O W E R;
-RADIANS:                      R A D I A N S;
-RAND:                         R A N D;
-REPLACE:                      R E P L A C E;
-REPLICATE:                    R E P L I C A T E;
-REVERSE:                      R E V E R S E;
-ROUND:                        R O U N D;
-RTRIM:                        R T R I M;
-SIGN:                         S I G N;
-SIN:                          S I N;
-SQRT:                         S Q R T;
-SQUARE:                       S Q U A R E;
-ST_DISTANCE:                  S T '_' D I S T A N C E;
-ST_INTERSECTS:                S T '_' I N T E R S E C T S;
-ST_ISVALID:                   S T '_' I S V A L I D;
-ST_ISVALIDDETAILED:           S T '_' I S V A L I D D E T A I L E D;
-ST_WITHIN:                    S T '_' W I T H I N;
-STARTSWITH:                   S T A R T S W I T H;
-SUBSTRING:                    S U B S T R I N G;
-SUM:                          S U M;
-TAN:                          T A N;
-TRUNC:                        T R U N C;
-UPPER:                        U P P E R;
 // others
 
 SPACE:                        [ \t\r\n]+                       -> skip;
 COMMENTS:                     '-' '-' ~[\t\r\n]+ [\t\r\n]     -> skip;
 
 // keywords type groups
+PARAM_NAME:                   '@'[a-zA-Z_][a-zA-Z_0-9]*;
 ID:                           [a-zA-Z_][a-zA-Z_0-9]*;
 INTEGER:                      Digits;
 
@@ -156,7 +94,6 @@ RIGHT_BRACKET:                ']';
 LEFT_PARENTHESIS:             '(';
 RIGHT_PARENTHESIS:            ')';
 QUOTE:                        '"'|'\'';
-
 
 NUMBER:
     Digits '.' Digits? ExponentPart?

@@ -68,7 +68,9 @@ object JsonConverter {
     }
 
     fun toJson(value: ObjectValue): ObjectNode {
-        val children = value.value.entries.stream().map { (k, v) -> Pair(k, toJson(v)) }
+        val children = value.value.entries.stream()
+            .filter { (_, v) -> v != UndefinedValue }
+            .map { (k, v) -> Pair(k, toJson(v)) }
             .collect(Collectors.toMap({ p -> p.first }, { p -> p.second }))
         return ObjectNode(jacksonObjectMapper().nodeFactory, children)
     }

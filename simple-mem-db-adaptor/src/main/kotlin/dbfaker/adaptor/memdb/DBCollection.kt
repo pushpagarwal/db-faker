@@ -1,7 +1,6 @@
 package dbfaker.adaptor.memdb
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import dbfaker.CosmosCollection
 import dbfaker.PartitionKey
@@ -10,10 +9,11 @@ import dbfaker.ResourceId
 import dbfaker.adaptor.memdb.json.convert.JsonConverter
 import dbfaker.adaptor.memdb.query.planer.QueryBuilder
 import dbfaker.memdb.InMemoryContainer
+import dbfaker.memdb.ObjectValue
+import dbfaker.memdb.UndefinedValue
 import dbfaker.parser.SqlParser
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.core.scheduler.Scheduler
 import reactor.core.scheduler.Schedulers
 import java.time.Instant
 import java.util.*
@@ -41,18 +41,22 @@ class DBCollection(
                 .toJson()
         )
 
-    override fun query(query: String, startCursor: String?): Flux<QueryResponseItem> {
+    override fun query(query: String, params: ObjectNode?, startCursor: String?): Flux<QueryResponseItem> {
         val queryExpression = SqlParser.parse(query)
-        val q = QueryBuilder.buildQuery(queryExpression)
+        val q = QueryBuilder.buildQuery(queryExpression,
+            params?.let { JsonConverter.fromJson(it) } ?: ObjectValue()
+        )
         return if (q.fromAlias != null) {
             var stream = c.stream()
             stream = q.orderBy?.let { stream.sorted(q.orderBy) } ?: stream
             stream = q.predicate?.let { stream.filter(q.predicate) } ?: stream
             Flux.fromStream(stream)
                 .subscribeOn(Schedulers.parallel())
+                .map { it.root }
                 .map(q.selection)
+                .filter { it != UndefinedValue }
         } else {
-            Flux.just(q.selection.invoke(DbObject.fromJson(ObjectNode(JsonNodeFactory.instance), ResourceId())))
+            Flux.just(q.selection.invoke(ObjectValue()))
         }.map { DbQueryResponseItem(JsonConverter.toJson(it), "") }
     }
 }

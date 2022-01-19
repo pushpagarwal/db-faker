@@ -1,8 +1,8 @@
 package dbfaker.cosmos.dto
 
-data class Parameter(val name: String, val value: String)
+import com.fasterxml.jackson.databind.node.ObjectNode
 
 data class QueryRequest(
     val query: String,
-    val parameters: List<Parameter>?,
+    val parameters: ObjectNode?,
 )

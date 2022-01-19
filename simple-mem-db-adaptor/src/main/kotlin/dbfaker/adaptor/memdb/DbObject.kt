@@ -12,7 +12,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.atomic.AtomicLong
 
-class DbObject(private val root: ObjectValue, parentRid: ResourceId) : JsonDocument<String> {
+class DbObject(val root: ObjectValue, parentRid: ResourceId) : JsonDocument<String> {
     val _rid: String
 
     val _self = "/dbs/${parentRid.databaseId}/colls/${parentRid.text}/docs/$id"

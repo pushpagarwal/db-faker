@@ -80,6 +80,8 @@ data class ArrayValue(override val value: List<BaseJsonValue>) : BaseJsonValue {
 
 data class ObjectValue(override val value: Map<String, BaseJsonValue>) : BaseJsonValue {
 
+    constructor() : this(mapOf())
+
     override val type: ValueType
         get() = ValueType.OBJECT
 

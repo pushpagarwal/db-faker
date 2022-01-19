@@ -29,7 +29,8 @@ object FunctionResolver {
         .collect(Collectors.toUnmodifiableMap({ p -> p.first }, { p -> Pair(p.second, p.third) }))
 
     fun execute(name: String, arguments: List<BaseJsonValue>): BaseJsonValue {
-        val (obj, callable) = functionHandlers[name] ?: throw IllegalArgumentException("$name is not supported.")
+        val (obj, callable) = functionHandlers[name]
+            ?: throw IllegalArgumentException("Function $name is not supported.")
         val parameters = callable.parameters
         val args = mutableMapOf<KParameter, Any?>()
         for ((i, p) in parameters.withIndex()) {
@@ -41,7 +42,7 @@ object FunctionResolver {
                         throw IllegalArgumentException("Var arg must be the last argument.")
                     val varArgType = p.type.arguments[0].type ?: Any::class.createType(nullable = true)
                     val varArgClass = (varArgType.classifier as KClass<*>).java
-                    val arrSize = arguments.size - i + 1;
+                    val arrSize = arguments.size - i + 1
                     args[p] = Array.newInstance(varArgClass, arrSize)
                     for (j in 0 until arrSize)
                         Array.set(args[p], j, resolveParameter(j + i - 1, arguments[j + i - 1], varArgType))
@@ -53,7 +54,8 @@ object FunctionResolver {
                         args[p] = null
                     } else
                         throw IllegalArgumentException(
-                            "Only ${arguments.size} parameters passed, Expected arguments: ${parameters.size}"
+                            "$name: Only ${arguments.size} parameters passed," +
+                                    "Expected arguments: ${parameters.size - 1}"
                         )
                 }
             }

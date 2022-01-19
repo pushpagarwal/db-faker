@@ -1,6 +1,7 @@
 package dbfaker.parser.antlr
 
 import dbfaker.parser.model.*
+import dbfaker.parser.model.ParameterName
 import org.antlr.v4.kotlinruntime.ParserRuleContext
 import org.antlr.v4.kotlinruntime.tree.TerminalNode
 import java.util.stream.Collectors
@@ -39,7 +40,10 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
     override fun visitInputAliasExpression(ctx: CosmosDBSqlParser.InputAliasExpressionContext): BaseQueryExpression {
         val alias = ctx.ID()?.text
         if (alias == null || !aliasList.contains(alias))
-            throw IllegalArgumentException("Wrong alias Value.")
+            throw IllegalArgumentException(
+                "Unexpected token:$alias" +
+                        ctx.position?.start?.let { " at position: ${it.line}:${it.column}." }
+            )
         return Id(alias)
     }
 
@@ -354,6 +358,10 @@ class ExpressionVisitor : CosmosDBSqlParserBaseVisitor<BaseQueryExpression>() {
 
     override fun visitSelect_alias(ctx: CosmosDBSqlParser.Select_aliasContext): BaseQueryExpression {
         return Id(ctx.ID()!!.text)
+    }
+
+    override fun visitParameterName(ctx: CosmosDBSqlParser.ParameterNameContext): BaseQueryExpression {
+        return ParameterName(ctx.text.substring(1))
     }
 
     private fun getToken(ctx: ParserRuleContext, types: Set<Int>): TerminalNode? {

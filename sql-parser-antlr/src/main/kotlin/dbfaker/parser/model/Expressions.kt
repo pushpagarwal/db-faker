@@ -64,6 +64,8 @@ interface ObjectExpression<T : ScalarExpression> {
     val properties: Map<Id, T>
 }
 
+data class ParameterName(val name: String) : ScalarExpression
+
 sealed interface ConstExpression : ScalarExpression
 
 data class NumberConst(val value: Double) : ConstExpression

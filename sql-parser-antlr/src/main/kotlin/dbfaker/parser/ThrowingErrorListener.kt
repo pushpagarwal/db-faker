@@ -16,7 +16,7 @@ object ThrowingErrorListener : BaseErrorListener() {
         e: RecognitionException?
     ) {
         throw ParseCancellationException(
-            "Sql Parsing failed at line $line:$charPositionInLine $msg, " +
+            "Sql Parsing failed at position $line:$charPositionInLine $msg, " +
                     "offending symbol $offendingSymbol"
         )
     }

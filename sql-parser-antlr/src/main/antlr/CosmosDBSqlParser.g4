@@ -196,11 +196,11 @@ unary_operator:
 
 primary_expression
     : constant # constantExpression
+    | function_call_expression # functionCallExpression
     | ID # inputAliasExpression
-    // parameter_name: Represents a value of the specified parameter name. Parameter names must have a single @ as the first character.
+    | PARAM_NAME # parameterName
     | array_create_expression # arrayCreateExpression
     | object_create_expression # objectCreateExpression
-    | function_call_expression # functionCallExpression
     | LEFT_PARENTHESIS scalar_expression RIGHT_PARENTHESIS # parenthesisScalarExpression
     | LEFT_PARENTHESIS sql_query RIGHT_PARENTHESIS # parenthesisSqlExpression
     | primary_expression DOT property_name # propertyPath
@@ -244,66 +244,5 @@ object_constant_items
     ;
 
 sys_function_name
-    : CONTAINS
-    |ABS
-    |ACOS
-    |ARRAY_CONCAT
-    |ARRAY_CONTAINS
-    |ARRAY_LENGTH
-    |ARRAY_SLICE
-    |ASIN
-    |ATAN
-    |ATN2
-    |AVG
-    |CEILING
-    |CONCAT
-    |CONTAINS
-    |COS
-    |COT
-    |COUNT
-    |DEGREES
-    |ENDSWITH
-    |EXP
-    |FLOOR
-    |INDEX_OF
-    |S_ARRAY
-    |IS_BOOL
-    |IS_DEFINED
-    |IS_FINITE_NUMBER
-    |IS_NULL
-    |IS_NUMBER
-    |IS_OBJECT
-    |IS_PRIMITIVE
-    |IS_STRING
-    |LENGTH
-    |LOG
-    |LOG10
-    |LOWER
-    |LTRIM
-    |MAX
-    |MIN
-    |PI
-    |POWER
-    |RADIANS
-    |RAND
-    |REPLACE
-    |REPLICATE
-    |REVERSE
-    |ROUND
-    |RTRIM
-    |SIGN
-    |SIN
-    |SQRT
-    |SQUARE
-    |ST_DISTANCE
-    |ST_INTERSECTS
-    |ST_ISVALID
-    |ST_ISVALIDDETAILED
-    |ST_WITHIN
-    |STARTSWITH
-    |SUBSTRING
-    |SUM
-    |TAN
-    |TRUNC
-    |UPPER
+    : ID
     ;

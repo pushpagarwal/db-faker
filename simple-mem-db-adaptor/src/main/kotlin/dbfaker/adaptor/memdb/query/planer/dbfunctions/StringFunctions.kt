@@ -20,7 +20,7 @@ object StringFunctions : DbFunctions {
                 }
             }
         }
-        return Pattern.compile(pattern, flags).matcher(str).matches()
+        return Pattern.compile(pattern, flags).matcher(str).find()
     }
 
     @DbFunction(name = "CONCAT")

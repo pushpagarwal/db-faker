@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dbfaker.ResourceId
 import dbfaker.adaptor.memdb.DbObject
+import dbfaker.adaptor.memdb.json.convert.JsonConverter
+import dbfaker.memdb.ObjectValue
 import dbfaker.parser.SqlParser
 import dbfaker.parser.error.ParseCancellationException
 import org.junit.Assert
@@ -23,7 +25,7 @@ class ExpressionEvaluationTest {
     @Before
     fun setup() {
         val node = jacksonObjectMapper().readTree(readFile("object1.json"))
-        val doc = DbObject.fromJson(node as ObjectNode, ResourceId(123, 234 shl 8))
+        val doc = JsonConverter.fromJson(node as ObjectNode)
         evaluator = ExpressionBuilder("c", doc)
     }
 

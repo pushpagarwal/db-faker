@@ -3,57 +3,66 @@ package dbfaker.adaptor.memdb.query.planer
 import dbfaker.adaptor.memdb.DbObject
 import dbfaker.memdb.*
 import dbfaker.parser.model.*
+import dbfaker.parser.model.ParameterName
 import java.util.stream.Collectors
 
 typealias QueryPredicate = (DbObject) -> Boolean
 
-typealias SelectTransform = (DbObject) -> BaseJsonValue
+typealias SelectTransform = (ObjectValue) -> BaseJsonValue
 
-class ExpressionBuilder(private val alias: String?, private val doc: DbObject) {
+class ExpressionBuilder(
+    private val alias: String?,
+    private val doc: ObjectValue,
+    private val parameters: ObjectValue = ObjectValue(),
+) {
 
     fun evaluate(expression: ScalarExpression): BaseJsonValue {
-        return try {
-            when (expression) {
-                is NumberConst -> NumberValue.valueOf(expression.value)
-                is LongConst -> NumberValue.valueOf(expression.value)
-                is TextConst -> TextValue(expression.value)
-                is BooleanConst -> BooleanValue.valueOf(expression.value)
-                is IdPropertyPath -> doc.at(parsePropertyPath(alias, expression.path))
-                is Property -> evaluateProperty(expression)
-                is Equality -> compare(expression) { it == 0 }
-                is NonEquality -> !(compare(expression) { it == 0 })
-                is LessThan -> compare(expression) { it < 0 }
-                is GreaterThan -> compare(expression) { it > 0 }
-                is LessEqual -> compare(expression) { it <= 0 }
-                is GreaterEqual -> compare(expression) { it >= 0 }
-                is BitComplement -> performIntExpression(expression) { a -> a.inv() }
-                is Negate -> performNumericExpression(expression) { a -> -a }
-                is Not -> performNot(expression)
-                is Id -> if (alias == expression.name) doc.at("") else doc.get(expression.name)
-                NullConst -> NullValue
-                UndefinedConst -> UndefinedValue
-                is Addition -> performAddition(expression)
-                is BitAnd -> performIntExpression(expression) { a, b -> a and b }
-                is BitOr -> performIntExpression(expression) { a, b -> a or b }
-                is BitXor -> performIntExpression(expression) { a, b -> a xor b }
-                is Divide -> performNumericExpression(expression) { a, b -> a / b }
-                is ModExpression -> performIntExpression(expression) { a, b -> a % b }
-                is Multiplication -> performNumericExpression(expression) { a, b -> a * b }
-                is Subtraction -> performNumericExpression(expression) { a, b -> a - b }
-                is InExpression -> performInExpression(expression)
-                is And -> performBooleanExpression(expression) { a, b -> a && b }
-                is Or -> performBooleanExpression(expression) { a, b -> a || b }
-                is ArrayConst -> createArray(expression.elements)
-                is ObjectConst -> createObject(expression.properties)
-                is ArrayCreation -> createArray(expression.elements)
-                is ObjectCreation -> createObject(expression.properties)
-                is FunctionCall -> functionCall(expression)
-                is IndexExpression -> evaluateIndexed(expression)
-            }
-        } catch (_: Exception) {
-            UndefinedValue
+        return when (expression) {
+            is NumberConst -> NumberValue.valueOf(expression.value)
+            is LongConst -> NumberValue.valueOf(expression.value)
+            is TextConst -> TextValue(expression.value)
+            is BooleanConst -> BooleanValue.valueOf(expression.value)
+            is IdPropertyPath -> doc.at(parsePropertyPath(alias, expression.path))
+            is Property -> evaluateProperty(expression)
+            is Equality -> compare(expression) { it == 0 }
+            is NonEquality -> !(compare(expression) { it == 0 })
+            is LessThan -> compare(expression) { it < 0 }
+            is GreaterThan -> compare(expression) { it > 0 }
+            is LessEqual -> compare(expression) { it <= 0 }
+            is GreaterEqual -> compare(expression) { it >= 0 }
+            is BitComplement -> performIntExpression(expression) { a -> a.inv() }
+            is Negate -> performNumericExpression(expression) { a -> -a }
+            is Not -> performNot(expression)
+            is Id -> if (alias == expression.name) doc.at("") else doc.get(expression.name)
+            NullConst -> NullValue
+            UndefinedConst -> UndefinedValue
+            is Addition -> performAddition(expression)
+            is BitAnd -> performIntExpression(expression) { a, b -> a and b }
+            is BitOr -> performIntExpression(expression) { a, b -> a or b }
+            is BitXor -> performIntExpression(expression) { a, b -> a xor b }
+            is Divide -> performNumericExpression(expression) { a, b -> a / b }
+            is ModExpression -> performIntExpression(expression) { a, b -> a % b }
+            is Multiplication -> performNumericExpression(expression) { a, b -> a * b }
+            is Subtraction -> performNumericExpression(expression) { a, b -> a - b }
+            is InExpression -> performInExpression(expression)
+            is And -> performBooleanExpression(expression) { a, b -> a && b }
+            is Or -> performBooleanExpression(expression) { a, b -> a || b }
+            is ArrayConst -> createArray(expression.elements)
+            is ObjectConst -> createObject(expression.properties)
+            is ArrayCreation -> createArray(expression.elements)
+            is ObjectCreation -> createObject(expression.properties)
+            is FunctionCall -> functionCall(expression)
+            is IndexExpression -> evaluateIndexed(expression)
+            is ParameterName -> getParameter(expression)
         }
+    }
 
+    private fun getParameter(expression: ParameterName): BaseJsonValue {
+        val param = parameters.get(expression.name)
+        return if (param == UndefinedValue)
+            throw IllegalArgumentException("Invalid Parameter reference: ${expression.name}")
+        else
+            param
     }
 
     private fun functionCall(expression: FunctionCall): BaseJsonValue {
@@ -176,68 +185,12 @@ class ExpressionBuilder(private val alias: String?, private val doc: DbObject) {
     }
 
     companion object {
-        fun buildPredicate(alias: String?, expression: ScalarExpression): QueryPredicate {
-            return { doc: DbObject ->
-                when (val value = ExpressionBuilder(alias, doc).evaluate(expression)) {
-                    is BooleanValue -> value.value
-                    else -> false
-                }
-            }
-        }
-
-        fun buildOrderBy(alias: String?, orderByItemList: OrderByItemList): Comparator<DbObject> {
-            return orderByItemList.elements.stream()
-                .map { item -> Pair(parsePropertyPath(alias, item.property.path), item.descending) }
-                .map { p ->
-                    val cmp = Comparator.comparing<DbObject, BaseJsonValue> { doc -> doc.at(p.first) }
-                    if (p.second) cmp.reversed() else cmp
-                }
-                .reduce { c1, c2 -> c1.thenComparing(c2) }
-                .orElseThrow { IllegalStateException() }
-        }
-
-        fun buildSelection(alias: String?, selectExpression: SelectExpression): SelectTransform {
-            return when (selectExpression) {
-                is SelectValueExpression -> { doc -> buildSelectionValue(alias, selectExpression.expression, doc) }
-                is SelectItemList -> { doc -> buildSelectionList(alias, selectExpression.elements, doc) }
-            }
-        }
-
-        private fun buildSelectionValue(
-            alias: String?,
-            scalarExpression: ScalarExpression,
-            doc: DbObject
-        ): BaseJsonValue = ExpressionBuilder(alias, doc).evaluate(scalarExpression)
-
-
-        private fun buildSelectionList(
-            alias: String?,
-            items: List<SelectItem>,
-            doc: DbObject
-        ): BaseJsonValue {
-            val builder = ExpressionBuilder(alias, doc)
-            var index = 0
-            val m = items.stream()
-                .map {
-                    Pair(getName(it.alias, it.expression, ++index), builder.evaluate(it.expression))
-                }
-                .collect(Collectors.toUnmodifiableMap({ p -> p.first }, { p -> p.second }))
-            return ObjectValue(m)
-        }
-
-        private fun getName(alias: String?, scalarExpression: ScalarExpression, index: Int): String {
-            return alias ?: if (scalarExpression is PropertyExpression) {
-                scalarExpression.path.substringAfterLast('.')
-            } else
-                "\$$index"
-        }
-
-        private fun parsePropertyPath(alias: String?, path: String): String {
+        fun parsePropertyPath(alias: String?, path: String): String {
             val prefix = ".$alias."
             if (alias != null && path.startsWith(prefix)) {
                 return path.replaceFirst(".$alias", "").replace('.', '/')
             }
-            throw IllegalArgumentException("Illegal path")
+            throw IllegalArgumentException("Illegal property: $path.")
         }
 
     }

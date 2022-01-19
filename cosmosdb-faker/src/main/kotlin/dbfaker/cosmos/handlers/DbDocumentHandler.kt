@@ -57,7 +57,7 @@ class DbDocumentHandler(private val dbInterface: DbInterface) {
         val jsonMono = serverRequest.bodyToMono(QueryRequest::class.java)
         val containerMono = dbInterface.queryContainer(dbId, colId)
         return Mono.zip(jsonMono, containerMono)
-            .flatMapMany { t -> t.t2.query(t.t1.query) }
+            .flatMapMany { t -> t.t2.query(t.t1.query, t.t1.parameters) }
             .map(QueryResponseItem::item)
             .collectList()
             .map { list -> QueryResponse("", list.size, list) }
